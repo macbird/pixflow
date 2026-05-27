@@ -14,6 +14,7 @@ Documentação para implementar o sistema com **Cursor**, em **fases**, com **fr
 | [06-pwa-responsive.md](./06-pwa-responsive.md) | **PWA + layout responsivo (obrigatório)** |
 | [07-mobile-cards-ux.md](./07-mobile-cards-ux.md) | **Listas em cards (não tabelas)** |
 | [08-mobile-desktop-experience.md](./08-mobile-desktop-experience.md) | **UX celular + navegador desktop** |
+| [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) | **Progresso real da implementação** |
 | [../IPTV-MANAGER-SPEC-TEMP.md](../../IPTV-MANAGER-SPEC-TEMP.md) | Especificação funcional completa |
 
 ---
