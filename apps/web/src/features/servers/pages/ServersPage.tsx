@@ -22,8 +22,9 @@ export const ServersPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['servers'] });
       setIsModalOpen(false);
     },
-    onError: (err: any) => {
-      alert(err.response?.data?.message || 'Erro ao criar servidor');
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } };
+      alert(error.response?.data?.message || 'Erro ao criar servidor');
     }
   });
 
@@ -47,7 +48,7 @@ export const ServersPage: React.FC = () => {
       </div>
 
       <CardList>
-        {servers?.map((server: any) => (
+        {servers?.map((server: { id: string; name: string; panelUrl: string; status: string }) => (
           <EntityCard
             key={server.id}
             title={server.name}

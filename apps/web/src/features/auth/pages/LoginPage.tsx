@@ -16,8 +16,9 @@ export const LoginPage: React.FC = () => {
       const response = await authApi.login(data.email, data.password);
       localStorage.setItem('token', response.token);
       navigate('/');
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Invalid credentials');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      alert(error.response?.data?.message || 'Invalid credentials');
     }
   };
 

@@ -41,8 +41,7 @@ const start = async () => {
     await app.register(registerServersModule, { prefix: '/api/servers' });
     await app.register(registerTagsModule, { prefix: '/api/tags' });
 
-    const port = Number(process.env.PORT) || 3000;
-...
+    const port = Number(process.env.PORT) || 3001;
 
     await app.listen({ port, host: '0.0.0.0' });
     console.log(`Server listening on port ${port}`);

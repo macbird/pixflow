@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tagsApi } from '../api/tags.api';
 import { CardList, EntityCard } from '../../../shared/ui/lists/EntityCard';
-import { Plus, Tag as TagIcon } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Modal } from '../../../shared/ui/modals/Modal';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,6 +23,10 @@ export const TagsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['tags'] });
       setIsModalOpen(false);
     },
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } };
+      alert(error.response?.data?.message || 'Erro ao criar tag');
+    }
   });
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<TagInput>({
@@ -51,7 +55,7 @@ export const TagsPage: React.FC = () => {
       </div>
 
       <CardList>
-        {tags?.map((tag: any) => (
+        {tags?.map((tag: { id: string; name: string; color: string }) => (
           <EntityCard
             key={tag.id}
             title={tag.name}

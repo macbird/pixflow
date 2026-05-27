@@ -1,10 +1,9 @@
 import React from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, CreditCard, Server, Tag, LogOut, Menu, X } from 'lucide-react';
 
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogout = () => {
@@ -13,7 +12,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   };
 
   const navItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, href: '/' },
+    { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
     { name: 'Clientes', icon: Users, href: '/customers' },
     { name: 'Planos', icon: CreditCard, href: '/plans' },
     { name: 'Servidores', icon: Server, href: '/servers' },

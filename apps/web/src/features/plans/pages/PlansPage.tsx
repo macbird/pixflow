@@ -22,8 +22,9 @@ export const PlansPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] });
       setIsModalOpen(false);
     },
-    onError: (err: any) => {
-      alert(err.response?.data?.message || 'Erro ao criar plano');
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } };
+      alert(error.response?.data?.message || 'Erro ao criar plano');
     }
   });
 
@@ -47,7 +48,7 @@ export const PlansPage: React.FC = () => {
       </div>
 
       <CardList>
-        {plans?.map((plan: any) => (
+        {plans?.map((plan: { id: string; name: string; maxConnections: number; price: number; status: string; billingCycle: string }) => (
           <EntityCard
             key={plan.id}
             title={plan.name}

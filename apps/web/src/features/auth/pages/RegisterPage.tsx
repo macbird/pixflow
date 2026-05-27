@@ -16,8 +16,9 @@ export const RegisterPage: React.FC = () => {
       const response = await authApi.register(data);
       localStorage.setItem('token', response.token);
       navigate('/');
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Error registering');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      alert(error.response?.data?.message || 'Error registering');
     }
   };
 
