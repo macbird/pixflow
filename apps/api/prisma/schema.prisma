@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountStatus {
+  active
+  suspended
+}
+
+enum UserRole {
+  tenant_owner
+  tenant_admin
+  tenant_operator
+  tenant_viewer
+}
+
+enum BillingCycle {
+  monthly
+  quarterly
+  yearly
+}
+
+enum PlanStatus {
+  active
+  archived
+}
+
+enum ServerStatus {
+  active
+  maintenance
+  full
+}
+
+model Account {
+  id         String        @id @default(uuid())
+  name       String
+  slug       String        @unique
+  phone      String?
+  status     AccountStatus @default(active)
+  planSaas   String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  users      AccountUser[]
+  plans      Plan[]
+  servers    Server[]
+  tags       Tag[]
+
+  @@map("accounts")
+}
+
+model AccountUser {
+  id           String    @id @default(uuid())
+  accountId    String
+  account      Account   @relation(fields: [accountId], references: [id])
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         UserRole  @default(tenant_owner)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("account_users")
+}
+
+model Plan {
+  id                   String       @id @default(uuid())
+  tenantId             String
+  account              Account      @relation(fields: [tenantId], references: [id])
+  name                 String
+  description          String?
+  price                Decimal      @db.Decimal(10, 2)
+  billingCycle         BillingCycle @default(monthly)
+  maxConnections       Int          @default(1)
+  extraConnectionPrice Decimal?     @db.Decimal(10, 2)
+  status               PlanStatus   @default(active)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@map("plans")
+}
+
+model Server {
+  id             String       @id @default(uuid())
+  tenantId       String
+  account        Account      @relation(fields: [tenantId], references: [id])
+  name           String
+  panelUrl       String
+  panelNotes     String?
+  maxConnections Int?
+  status         ServerStatus @default(active)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("servers")
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  tenantId  String
+  account   Account  @relation(fields: [tenantId], references: [id])
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tags")
+}

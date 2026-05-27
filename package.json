@@ -1,0 +1,15 @@
+{
+  "name": "iptv-manager",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api:dev": "npm run dev -w apps/api",
+    "web:dev": "npm run dev -w apps/web",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
+  }
+}
