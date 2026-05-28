@@ -6,6 +6,7 @@ import { registerPlansModule } from './modules/plans';
 import { registerServersModule } from './modules/servers';
 import { registerTagsModule } from './modules/tags';
 import { registerCustomersModule } from './modules/customers';
+import { registerAdminModule } from './modules/admin';
 import { tenantContextMiddleware } from './core/middleware/tenant-context';
 
 const app = Fastify({
@@ -31,6 +32,18 @@ const start = async () => {
       }
     });
 
+    app.decorate("authenticateAdmin", async (request: any, reply: any) => {
+      try {
+        await request.jwtVerify();
+        const user = request.user as any;
+        if (user.type !== 'platform_admin') {
+          throw new Error('Unauthorized');
+        }
+      } catch (err) {
+        reply.status(401).send({ message: 'Unauthorized' });
+      }
+    });
+
     // Health check
     app.get('/health', async () => {
       return { status: 'ok' };
@@ -42,6 +55,7 @@ const start = async () => {
     await app.register(registerServersModule, { prefix: '/api/servers' });
     await app.register(registerTagsModule, { prefix: '/api/tags' });
     await app.register(registerCustomersModule, { prefix: '/api/customers' });
+    await app.register(registerAdminModule, { prefix: '/api/admin' });
 
     const port = Number(process.env.PORT) || 3001;
 

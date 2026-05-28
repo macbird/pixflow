@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { AppShell } from './app/layouts/AppShell';
+import { AdminShell } from './app/layouts/AdminShell';
 import { PlansPage } from './features/plans/pages/PlansPage';
 import { CreatePlanPage } from './features/plans/pages/CreatePlanPage';
 import { EditPlanPage } from './features/plans/pages/EditPlanPage';
@@ -14,6 +15,11 @@ import { EditTagPage } from './features/tags/pages/EditTagPage';
 import { CustomersPage } from './features/customers/pages/CustomersPage';
 import { CreateCustomerPage } from './features/customers/pages/CreateCustomerPage';
 import { EditCustomerPage } from './features/customers/pages/EditCustomerPage';
+import { AdminLoginPage } from './features/admin/pages/AdminLoginPage';
+import { AccountsPage } from './features/admin/pages/AccountsPage';
+import { CreateAccountPage } from './features/admin/pages/CreateAccountPage';
+import { EditAccountPage } from './features/admin/pages/EditAccountPage';
+import { AdminDashboardPage } from './features/admin/pages/AdminDashboardPage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient();
@@ -22,6 +28,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token');
   if (!token) {
     return <Navigate to="/login" />;
+  }
+  return <>{children}</>;
+};
+
+const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const token = localStorage.getItem('adminToken');
+  if (!token) {
+    return <Navigate to="/admin/login" />;
   }
   return <>{children}</>;
 };
@@ -163,6 +177,47 @@ function App() {
                   <EditCustomerPage />
                 </AppShell>
               </ProtectedRoute>
+            } 
+          />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route 
+            path="/admin/dashboard" 
+            element={
+              <AdminProtectedRoute>
+                <AdminShell>
+                  <AdminDashboardPage />
+                </AdminShell>
+              </AdminProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/accounts" 
+            element={
+              <AdminProtectedRoute>
+                <AdminShell>
+                  <AccountsPage />
+                </AdminShell>
+              </AdminProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/accounts/new" 
+            element={
+              <AdminProtectedRoute>
+                <AdminShell>
+                  <CreateAccountPage />
+                </AdminShell>
+              </AdminProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/accounts/:id/edit" 
+            element={
+              <AdminProtectedRoute>
+                <AdminShell>
+                  <EditAccountPage />
+                </AdminShell>
+              </AdminProtectedRoute>
             } 
           />
         </Routes>

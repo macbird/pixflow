@@ -129,3 +129,13 @@ model Customer {
 
   @@map("customers")
 }
+
+model PlatformAdmin {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_admins")
+}
