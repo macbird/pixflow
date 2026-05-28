@@ -8,11 +8,12 @@ import { Key, Copy, CheckCircle } from 'lucide-react';
 interface ResetPasswordModalProps {
   userId: string | null;
   userName: string | null;
+  userEmail: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ userId, userName, onClose, onSuccess }) => {
+export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ userId, userName, userEmail, onClose, onSuccess }) => {
   const [step, setStep] = React.useState<'form' | 'success'>('form');
   const [savedPassword, setSavedPassword] = React.useState('');
   
@@ -36,7 +37,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ userId, 
   };
 
   const handleCopy = () => {
-    const text = `Olá ${userName}, sua senha no IPTV Manager foi resetada.\n\nAcesso: http://localhost:5173/login\nSenha Provisória: ${savedPassword}\n\n(Você deverá alterar esta senha no primeiro acesso).`;
+    const text = `Olá ${userName}, sua senha no IPTV Manager foi resetada.\n\nAcesso: http://localhost:5173/login\nE-mail: ${userEmail}\nSenha Provisória: ${savedPassword}\n\n(Você deverá alterar esta senha no primeiro acesso).`;
     navigator.clipboard.writeText(text);
     showToast.success('Instruções copiadas!');
   };

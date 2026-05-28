@@ -13,7 +13,7 @@ export const AccountsPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
-  const [resetUser, setResetUser] = React.useState<{ id: string, name: string } | null>(null);
+  const [resetUser, setResetUser] = React.useState<{ id: string, name: string, email: string } | null>(null);
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['accounts'],
@@ -70,7 +70,7 @@ export const AccountsPage: React.FC = () => {
                         <p className="text-xs text-slate-500 truncate">{user.email}</p>
                       </div>
                       <button 
-                        onClick={() => setResetUser({ id: user.id, name: user.name })}
+                        onClick={() => setResetUser({ id: user.id, name: user.name, email: user.email })}
                         className="ml-2 p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-all"
                         title="Resetar Senha"
                       >
@@ -98,6 +98,7 @@ export const AccountsPage: React.FC = () => {
       <ResetPasswordModal 
         userId={resetUser?.id || null}
         userName={resetUser?.name || null}
+        userEmail={resetUser?.email || null}
         onClose={() => setResetUser(null)}
         onSuccess={() => {}}
       />
