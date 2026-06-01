@@ -4,19 +4,41 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginInput } from '@client-manager/shared';
 import { authApi } from '../api/auth.api';
 import { useNavigate, Link } from 'react-router-dom';
+import { Mail, Lock, Loader2 } from 'lucide-react';
+import { AuthShell } from '../../../shared/ui/auth/AuthShell';
+import { AuthField } from '../../../shared/ui/auth/AuthField';
+import { RememberMeCheckbox } from '../../../shared/ui/auth/RememberMeCheckbox';
+import { showToast } from '../../../shared/utils/toast';
+import { loadRememberedLogin, saveRememberedLogin } from '../../../shared/utils/remember-login';
+
+const remembered = loadRememberedLogin('tenant');
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginInput>({
+  const [rememberMe, setRememberMe] = React.useState(remembered.remember);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit',
+    defaultValues: {
+      email: remembered.email,
+      password: '',
+    },
   });
 
   const onSubmit = async (data: LoginInput) => {
     try {
       const response = await authApi.login(data.email, data.password);
+      saveRememberedLogin('tenant', data.email, rememberMe);
+
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      
+
       if (response.user.passwordResetRequired) {
         navigate('/change-password');
       } else {
@@ -24,53 +46,78 @@ export const LoginPage: React.FC = () => {
       }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      alert(error.response?.data?.message || 'Credenciais inválidas');
+      showToast.error(error.response?.data?.message || 'Credenciais inválidas');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Entrar na sua conta
-        </h2>
-      </div>
+    <AuthShell
+      variant="tenant"
+      title="Bem-vindo de volta"
+      subtitle="Entre com o e-mail e a senha da sua conta de revenda."
+      footer={
+        <span>
+          Acesso da plataforma?{' '}
+          <Link to="/admin/login" className="font-medium text-indigo-600 hover:text-indigo-700">
+            Painel admin
+          </Link>
+        </span>
+      }
+    >
+      <form
+        className="space-y-5"
+        method="post"
+        autoComplete="on"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
+        <AuthField
+          id="email"
+          label="E-mail"
+          type="email"
+          icon={Mail}
+          autoComplete="username email"
+          placeholder="voce@empresa.com"
+          error={errors.email?.message}
+          registration={register('email')}
+        />
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">E-mail</label>
-              <input
-                type="email"
-                {...register('email')}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-gray-900"
-              />
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-            </div>
+        <AuthField
+          id="password"
+          label="Senha"
+          type="password"
+          icon={Lock}
+          autoComplete="current-password"
+          placeholder="••••••••"
+          error={errors.password?.message}
+          registration={register('password')}
+        />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Senha</label>
-              <input
-                type="password"
-                {...register('password')}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-gray-900"
-              />
-              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-            </div>
+        <RememberMeCheckbox
+          id="remember-tenant"
+          checked={rememberMe}
+          onChange={setRememberMe}
+        />
 
-            <div>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none disabled:bg-indigo-400"
-              >
-                {isSubmitting ? 'Entrando...' : 'Entrar'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+        <p className="text-xs text-slate-500 -mt-2">
+          O navegador pode oferecer salvar a senha após o login (Chrome, Edge, etc.).
+        </p>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Entrando…
+            </>
+          ) : (
+            'Entrar'
+          )}
+        </button>
+      </form>
+    </AuthShell>
   );
 };

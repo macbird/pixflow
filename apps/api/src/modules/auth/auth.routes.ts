@@ -32,7 +32,10 @@ export async function authRoutes(app: FastifyInstance) {
         },
         token
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'name' in err && err.name === 'ZodError') {
+        return reply.status(400).send({ message: 'Dados de login inválidos' });
+      }
       return reply.status(401).send({ message: 'Invalid credentials' });
     }
   });

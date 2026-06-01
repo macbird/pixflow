@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { CUSTOMER_STATUS_VALUES } from './customer-status';
+import { CustomerStatus } from './enums';
 
 export const loginSchema = z.object({
   email: z.string().email(),
@@ -61,7 +63,8 @@ export const customerSchema = z.object({
   name: z.string().min(1),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().min(10, "Telefone inválido"),
-  status: z.enum(['active', 'inactive']).default('active'),
+  status: z.enum(CUSTOMER_STATUS_VALUES).default(CustomerStatus.ACTIVE),
+  tagIds: z.array(z.string().uuid()).optional(),
   planId: z.string().uuid().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
   expiresAt: z.preprocess((val) => val ? new Date(val as string) : undefined, z.date().optional()),

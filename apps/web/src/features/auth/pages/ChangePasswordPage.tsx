@@ -3,9 +3,15 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth.api';
 import { showToast } from '../../../shared/utils/toast';
+import { PasswordInput } from '../../../shared/ui/forms/PasswordInput';
 
 export const ChangePasswordPage: React.FC = () => {
-  const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm();
   const navigate = useNavigate();
   const password = watch('newPassword');
 
@@ -34,28 +40,24 @@ export const ChangePasswordPage: React.FC = () => {
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Nova Senha</label>
-            <input
-              type="password"
-              {...register('newPassword', { required: true, minLength: 6 })}
-              className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              placeholder="••••••••"
-            />
-          </div>
+          <PasswordInput
+            id="newPassword"
+            label="Nova Senha"
+            autoComplete="new-password"
+            registration={register('newPassword', { required: true, minLength: 6 })}
+            error={errors.newPassword?.message as string | undefined}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Confirmar Senha</label>
-            <input
-              type="password"
-              {...register('confirmPassword', { 
-                required: true, 
-                validate: value => value === password || 'As senhas não coincidem'
-              })}
-              className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              placeholder="••••••••"
-            />
-          </div>
+          <PasswordInput
+            id="confirmPassword"
+            label="Confirmar Senha"
+            autoComplete="new-password"
+            registration={register('confirmPassword', {
+              required: true,
+              validate: (value) => value === password || 'As senhas não coincidem',
+            })}
+            error={errors.confirmPassword?.message as string | undefined}
+          />
 
           <button
             type="submit"

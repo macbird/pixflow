@@ -39,6 +39,14 @@ enum ServerStatus {
   full
 }
 
+enum CustomerStatus {
+  active
+  trial
+  overdue
+  blocked
+  cancelled
+}
+
 model Account {
   id         String        @id @default(uuid())
   name       String
@@ -129,7 +137,7 @@ model Customer {
   name      String
   email     String?
   phone     String?
-  status    String   @default("active")
+  status    CustomerStatus @default(active)
   
   planId    String?
   plan      Plan?    @relation(fields: [planId], references: [id])

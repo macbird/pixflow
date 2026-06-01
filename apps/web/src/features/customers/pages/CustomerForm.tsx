@@ -6,6 +6,7 @@ import { plansApi } from '../../plans/api/plans.api';
 import { serversApi } from '../../servers/api/servers.api';
 import { Trash2, Plus } from 'lucide-react';
 import { TagInputChips } from '../../../shared/ui/forms/TagInputChips';
+import { CUSTOMER_STATUS_LABELS, CUSTOMER_STATUS_VALUES } from '@client-manager/shared';
 
 interface CustomerFormProps {
   onSubmit: (data: any) => Promise<void>;
@@ -128,6 +129,20 @@ export const CustomerForm = React.forwardRef<HTMLFormElement, CustomerFormProps>
               {plans?.data?.map((plan: { id: string; name: string }) => (
                 <option key={plan.id} value={plan.id}>
                   {plan.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Status</label>
+            <select
+              {...register('status')}
+              className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
+            >
+              {CUSTOMER_STATUS_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {CUSTOMER_STATUS_LABELS[value]}
                 </option>
               ))}
             </select>

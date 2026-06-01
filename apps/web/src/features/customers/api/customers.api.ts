@@ -1,8 +1,12 @@
 import { api } from '../../../shared/api/api.client';
-import type { CustomerInput } from '@client-manager/shared';
+import type { CustomerInput, CustomerListItem, PaginatedResponse } from '@client-manager/shared';
 
 export const customersApi = {
-  list: async (params: { page: number, pageSize: number, filter: string }) => {
+  list: async (params: {
+    page: number;
+    pageSize: number;
+    filter: string;
+  }): Promise<PaginatedResponse<CustomerListItem>> => {
     const response = await api.get('/customers', { params });
     return response.data;
   },

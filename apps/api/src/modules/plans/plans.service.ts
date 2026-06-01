@@ -22,6 +22,12 @@ export class PlansService {
     return { data, total };
   }
 
+  async findById(tenantId: string, id: string) {
+    return await prisma.plan.findFirst({
+      where: { id, tenantId },
+    });
+  }
+
   async create(tenantId: string, input: PlanInput) {
     return await prisma.plan.create({
       data: {

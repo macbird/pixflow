@@ -12,7 +12,9 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['@client-manager/shared', 'zod'],
+    // Aliased to packages/shared/src — pre-bundle would cache stale exports
+    exclude: ['@client-manager/shared'],
+    include: ['zod'],
   },
   server: {
     fs: {

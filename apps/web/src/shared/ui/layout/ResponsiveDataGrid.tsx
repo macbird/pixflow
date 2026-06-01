@@ -15,7 +15,7 @@ export interface ResponsiveDataGridProps<T extends { id: string | number }> {
   columns: DataGridColumn<T>[];
   renderMobileCard: (item: T) => React.ReactNode;
   /** First column title + secondary column titles (actions column is implicit). */
-  mobileHeaderTitles: string[];
+  mobileHeaderTitles?: string[];
   isLoading?: boolean;
   /** Width of the right section on mobile; must match cards (default 55%). */
   mobileRightWidth?: string;
@@ -32,7 +32,7 @@ export const ResponsiveDataGrid = <T extends { id: string | number }>({
   data,
   columns,
   renderMobileCard,
-  mobileHeaderTitles,
+  mobileHeaderTitles = [],
   isLoading,
   mobileRightWidth = '55%',
 }: ResponsiveDataGridProps<T>) => {
@@ -103,25 +103,27 @@ export const ResponsiveDataGrid = <T extends { id: string | number }>({
 
       {/* Mobile */}
       <div className="md:hidden">
-        <div className="sticky top-0 z-10 flex items-center px-4 py-2 border-b border-slate-100 bg-white/90 backdrop-blur-md">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-1 min-w-0 pl-2 truncate">
-            {mobileHeaderTitles[0]}
-          </span>
-          <div
-            className="flex items-center shrink-0 gap-2"
-            style={{ width: mobileRightWidth }}
-          >
-            {secondaryTitles.map((title) => (
-              <span
-                key={title}
-                className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-1 text-center min-w-0 truncate"
-              >
-                {title}
-              </span>
-            ))}
-            <span className="w-10 shrink-0" aria-hidden />
+        {mobileHeaderTitles.length > 0 ? (
+          <div className="sticky top-0 z-10 flex items-center px-4 py-2 border-b border-slate-100 bg-white/90 backdrop-blur-md">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-1 min-w-0 pl-2 truncate">
+              {mobileHeaderTitles[0]}
+            </span>
+            <div
+              className="flex items-center shrink-0 gap-2"
+              style={{ width: mobileRightWidth }}
+            >
+              {secondaryTitles.map((title) => (
+                <span
+                  key={title}
+                  className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-1 text-center min-w-0 truncate"
+                >
+                  {title}
+                </span>
+              ))}
+              <span className="w-16 shrink-0" aria-hidden />
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div className="divide-y divide-slate-50">
           {data.length === 0 ? (

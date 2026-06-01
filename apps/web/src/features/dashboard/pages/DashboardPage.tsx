@@ -17,6 +17,7 @@ import { dashboardApi } from '../api/dashboard.api';
 import { PageLayout } from '../../../shared/ui/layout/PageLayout';
 import { StatCard } from '../../../shared/ui/layout/StatCard';
 import { LoadingSpinner } from '../../../shared/ui/layout/LoadingSpinner';
+import { isApiAuthError, isApiNetworkError } from '../../../shared/api/api-error';
 
 function formatCurrency(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -30,7 +31,8 @@ export const DashboardPage: React.FC = () => {
   const {
     data: stats,
     isLoading: statsLoading,
-    isError: statsError,
+    isError: statsHasError,
+    error: statsQueryError,
     refetch: refetchStats,
   } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -40,7 +42,7 @@ export const DashboardPage: React.FC = () => {
   const { data: expirations, isLoading: expirationsLoading } = useQuery({
     queryKey: ['dashboard-expirations'],
     queryFn: () => dashboardApi.getUpcomingExpirations(5),
-    enabled: !statsError,
+    enabled: !statsHasError,
   });
 
   if (statsLoading) {
@@ -53,16 +55,19 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  if (statsError) {
-    const axiosErr = statsError as { response?: unknown };
-    const isNetworkError = !axiosErr?.response;
+  if (statsHasError) {
+    const isNetworkError = isApiNetworkError(statsQueryError);
+    const isAuthError = isApiAuthError(statsQueryError);
+
     return (
       <PageLayout title="Dashboard">
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center max-w-lg mx-auto mt-8">
           <p className="text-sm font-medium text-amber-900">
             {isNetworkError
               ? 'Não foi possível conectar à API.'
-              : 'Erro ao carregar o dashboard.'}
+              : isAuthError
+                ? 'Sessão expirada ou inválida.'
+                : 'Erro ao carregar o dashboard.'}
           </p>
           <p className="text-xs text-amber-800 mt-2">
             {isNetworkError ? (
@@ -70,21 +75,35 @@ export const DashboardPage: React.FC = () => {
                 Verifique se o servidor está rodando em{' '}
                 <code className="bg-amber-100 px-1 rounded">npm run api:dev</code> (porta 3001).
               </>
+            ) : isAuthError ? (
+              <>Faça login novamente com sua conta de revendedor (não use o painel admin).</>
             ) : (
               <>
-                Se o banco foi renomeado para <code className="bg-amber-100 px-1">client_manager</code>,
-                rode <code className="bg-amber-100 px-1">npx prisma migrate deploy</code> em{' '}
+                Confira os logs da API. Se alterou o banco, rode{' '}
+                <code className="bg-amber-100 px-1">npx prisma migrate deploy</code> em{' '}
                 <code className="bg-amber-100 px-1">apps/api</code>.
               </>
             )}
           </p>
-          <button
-            type="button"
-            onClick={() => refetchStats()}
-            className="mt-4 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
-          >
-            Tentar novamente
-          </button>
+          <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
+            {isAuthError ? (
+              <Link
+                to="/login"
+                onClick={() => localStorage.removeItem('token')}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+              >
+                Ir para o login
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => refetchStats()}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+              >
+                Tentar novamente
+              </button>
+            )}
+          </div>
         </div>
       </PageLayout>
     );
