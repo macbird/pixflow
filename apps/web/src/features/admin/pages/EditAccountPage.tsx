@@ -2,63 +2,85 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { tenantsApi } from '../api/admin.api';
-import { FormLayout } from '../../../shared/ui/forms/FormLayout';
+import { PageLayout } from '../../../shared/ui/layout/PageLayout';
 import { useCrud } from '../../../shared/hooks/useCrud';
 import { LoadingSpinner } from '../../../shared/ui/layout/LoadingSpinner';
-import { useForm } from 'react-hook-form';
+import { AccountForm, type AccountEditInput } from './AccountForm';
 
 export const EditAccountPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { register, handleSubmit, reset } = useForm();
+  const formRef = React.useRef<HTMLFormElement>(null);
 
-  const { data: accounts, isLoading } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: tenantsApi.list,
+  const { data: account, isLoading } = useQuery({
+    queryKey: ['accounts', id],
+    queryFn: () => tenantsApi.getById(id!),
+    enabled: Boolean(id),
   });
 
-  const account = accounts?.find((a: any) => a.id === id);
-
-  React.useEffect(() => {
-    if (account) {
-      reset(account);
-    }
-  }, [account, reset]);
-
-  const { update, isUpdating } = useCrud<any, any>({
+  const { update, isUpdating } = useCrud<unknown, AccountEditInput>({
     queryKey: ['accounts'],
-    updateFn: (id, data) => tenantsApi.toggleStatus(id, data.status),
+    updateFn: (accountId, data) => tenantsApi.toggleStatus(accountId, data.status),
     listPath: '/admin/accounts',
     entityName: 'Conta',
   });
 
-  const onSubmit = async (data: any) => {
-    await update(id!, data);
-  };
+  if (isLoading) {
+    return (
+      <div className="relative h-64">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
-  if (isLoading) return <div className="relative h-64"><LoadingSpinner /></div>;
-
-  return (
-    <FormLayout title="Editar Conta">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* ... */}
-        <div className="flex justify-end space-x-3 mt-6">
+  if (!account) {
+    return (
+      <PageLayout title="Editar Conta">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+          Conta não encontrada.
           <button
             type="button"
             onClick={() => navigate('/admin/accounts')}
-            className="px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="mt-4 block w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            Voltar para contas
+          </button>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  return (
+    <PageLayout
+      title="Editar Conta"
+      footer={
+        <div className="flex justify-end space-x-3">
+          <button
+            type="button"
+            onClick={() => navigate('/admin/accounts')}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             Cancelar
           </button>
           <button
-            type="submit"
+            type="button"
             disabled={isUpdating}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+            onClick={() => formRef.current?.requestSubmit()}
+            className="rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
           >
             {isUpdating ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
-      </form>
-    </FormLayout>
+      }
+    >
+      <AccountForm
+        ref={formRef}
+        mode="edit"
+        initialData={account}
+        onSubmit={async (data) => {
+          await update(id!, data);
+        }}
+      />
+    </PageLayout>
   );
 };

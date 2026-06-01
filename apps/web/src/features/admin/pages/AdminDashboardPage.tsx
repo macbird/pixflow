@@ -2,6 +2,8 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminDashboardApi } from '../api/admin.api';
 import { Users, Building2, UserCheck, ShieldAlert } from 'lucide-react';
+import { PageLayout } from '../../../shared/ui/layout/PageLayout';
+import { StatCard } from '../../../shared/ui/layout/StatCard';
 import { LoadingSpinner } from '../../../shared/ui/layout/LoadingSpinner';
 
 export const AdminDashboardPage: React.FC = () => {
@@ -10,66 +12,68 @@ export const AdminDashboardPage: React.FC = () => {
     queryFn: adminDashboardApi.getStats,
   });
 
-  if (isLoading) return <div className="relative h-64"><LoadingSpinner /></div>;
+  if (isLoading) {
+    return (
+      <PageLayout title="Dashboard">
+        <div className="relative h-64">
+          <LoadingSpinner />
+        </div>
+      </PageLayout>
+    );
+  }
 
-  const cards = [
+  const kpiCards = [
     {
-      title: 'Total de Contas',
-      value: stats?.totalAccounts || 0,
+      title: 'Total de contas',
+      value: stats?.totalAccounts ?? 0,
+      subtitle: 'Tenants na plataforma',
       icon: Building2,
-      color: 'text-blue-600',
-      bg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      iconBg: 'bg-blue-100',
+      href: '/admin/accounts',
     },
     {
-      title: 'Contas Ativas',
-      value: stats?.activeAccounts || 0,
+      title: 'Contas ativas',
+      value: stats?.activeAccounts ?? 0,
       icon: UserCheck,
-      color: 'text-green-600',
-      bg: 'bg-green-100',
+      iconColor: 'text-green-600',
+      iconBg: 'bg-green-100',
+      href: '/admin/accounts',
     },
     {
-      title: 'Contas Suspensas',
-      value: stats?.suspendedAccounts || 0,
+      title: 'Contas suspensas',
+      value: stats?.suspendedAccounts ?? 0,
       icon: ShieldAlert,
-      color: 'text-red-600',
-      bg: 'bg-red-100',
+      iconColor: 'text-red-600',
+      iconBg: 'bg-red-100',
+      href: '/admin/accounts',
     },
     {
-      title: 'Total de Usuários',
-      value: stats?.totalUsers || 0,
+      title: 'Total de usuários',
+      value: stats?.totalUsers ?? 0,
+      subtitle: 'Proprietários e equipe',
       icon: Users,
-      color: 'text-purple-600',
-      bg: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+      iconBg: 'bg-purple-100',
     },
   ];
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">Dashboard Admin</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((card) => (
-          <div key={card.title} className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">{card.title}</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">{card.value}</p>
-              </div>
-              <div className={`${card.bg} p-3 rounded-full`}>
-                <card.icon className={`h-6 w-6 ${card.color}`} />
-              </div>
-            </div>
-          </div>
+    <PageLayout title="Dashboard">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+        {kpiCards.map((card) => (
+          <StatCard key={card.title} {...card} />
         ))}
       </div>
 
-      <div className="mt-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Visão Geral da Plataforma</h2>
-        <p className="text-slate-600">
-          Este painel permite gerenciar todos os tenants da plataforma Cliente Manager. 
-          Você pode criar novas contas, suspender acessos e monitorar o crescimento global.
+      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:p-6">
+        <h2 className="text-base font-semibold text-slate-900 lg:text-lg">Visão geral da plataforma</h2>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+          Gerencie todos os tenants do Cliente Manager: crie contas, suspenda acessos e acompanhe o
+          crescimento global. Use a lista de contas para resetar senhas e editar o status de cada
+          revenda.
         </p>
       </div>
-    </div>
+    </PageLayout>
   );
 };

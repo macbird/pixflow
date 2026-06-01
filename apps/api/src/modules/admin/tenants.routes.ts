@@ -6,8 +6,26 @@ const tenantsService = new TenantsService();
 export async function tenantsRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticateAdmin);
 
-  app.get('/', async () => {
-    return await tenantsService.list();
+  app.get('/', async (request) => {
+    const { page, pageSize, filter } = request.query as {
+      page?: string;
+      pageSize?: string;
+      filter?: string;
+    };
+    return await tenantsService.list(
+      parseInt(page || '1', 10),
+      parseInt(pageSize || '10', 10),
+      filter || '',
+    );
+  });
+
+  app.get('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const account = await tenantsService.findById(id);
+    if (!account) {
+      return reply.status(404).send({ message: 'Account not found' });
+    }
+    return account;
   });
 
   app.post('/', async (request) => {

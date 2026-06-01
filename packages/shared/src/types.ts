@@ -16,3 +16,17 @@ export interface PaginatedResponse<T> {
   data: T[];
   total: number;
 }
+
+export interface AccountListItem {
+  id: string;
+  name: string;
+  slug: string;
+  status: 'active' | 'suspended';
+  users: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    passwordResetRequired: boolean;
+  }>;
+}

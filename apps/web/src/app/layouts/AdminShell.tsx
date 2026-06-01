@@ -48,26 +48,31 @@ export const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 
   return (
-    <div className="h-screen flex overflow-hidden bg-white">
+    <div className="h-screen flex bg-white">
       {/* Desktop sidebar */}
-      <div className="hidden md:flex md:flex-shrink-0">
+      <aside className="hidden md:flex md:flex-shrink-0">
         <div className="flex flex-col w-64">
-          <div className="flex flex-col h-0 flex-1 bg-slate-800">
+          <div className="flex flex-col h-full bg-slate-800">
             <div className="flex items-center h-16 flex-shrink-0 px-4 bg-slate-900 text-white font-bold text-xl">
               Admin Panel
             </div>
             <NavContent />
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-40 flex">
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setIsMobileMenuOpen(false)}></div>
+          <div
+            className="fixed inset-0 bg-gray-600 bg-opacity-75"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden
+          />
           <div className="relative flex-1 flex flex-col max-w-xs w-full bg-slate-800">
             <div className="absolute top-0 right-0 -mr-12 pt-2">
               <button
+                type="button"
                 className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -84,21 +89,24 @@ export const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }
         </div>
       )}
 
-      <div className="flex flex-col w-0 flex-1 overflow-hidden">
-        <div className="md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3">
+      <div className="flex flex-col w-0 flex-1 overflow-hidden min-h-0">
+        <header className="md:hidden bg-white h-16 flex items-center px-4 shrink-0 border-b border-slate-100">
           <button
-            className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none"
+            type="button"
+            className="h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-gray-900 focus:outline-none"
             onClick={() => setIsMobileMenuOpen(true)}
+            aria-label="Abrir menu"
           >
             <Menu className="h-6 w-6" />
           </button>
-        </div>
-        <main className="flex-1 relative z-0 overflow-y-auto focus:outline-none">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              {children}
-            </div>
-          </div>
+          <div
+            id="mobile-header-portal"
+            className="flex-1 flex justify-between items-center ml-2 min-w-0"
+          />
+        </header>
+
+        <main className="flex-1 relative z-0 overflow-hidden focus:outline-none min-h-0">
+          {children}
         </main>
       </div>
     </div>

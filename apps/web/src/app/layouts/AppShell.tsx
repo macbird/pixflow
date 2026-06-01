@@ -97,8 +97,8 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           <div id="mobile-header-portal" className="flex-1 flex justify-between items-center ml-2" />
         </header>
 
-        <main className="flex-1 relative z-0 overflow-y-auto focus:outline-none">
-            {children}
+        <main className="flex-1 relative z-0 overflow-hidden focus:outline-none min-h-0">
+          {children}
         </main>
       </div>
     </div>
