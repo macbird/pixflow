@@ -4,9 +4,21 @@ Referência funcional: `CLIENTE-MANAGER-SPEC-TEMP.md` (§6, §12–§15).
 
 **Objetivo:** produto completo para o revendedor operar clientes, cobrança automática, PIX, WhatsApp, dashboard, logs e fila de renovação no servidor.
 
-**Não inclui:** painel `super_admin` (Fase 2).
+**Não inclui:** painel `super_admin` (**Fase 2** — concluída) nem cobrança SaaS da plataforma (**Fase 2.5**).
 
 **Melhorias:** integrar [09-improvements-p0-p1.md](./09-improvements-p0-p1.md) (P0 obrigatório recomendado + P1).
+
+### Roadmap atualizado (pós Fase 2)
+
+| Fase | Escopo | Este documento |
+|------|--------|----------------|
+| **1** (passos 1–3, 7 parcial) | CRUD, dashboard, UX | ✅ Concluído |
+| **2** | Admin plataforma | Ver [02-phase-2-admin-panel.md](./02-phase-2-admin-panel.md) |
+| **2.5** | Plataforma cobra tenants (SaaS) | [10-billing-dual-layer.md](./10-billing-dual-layer.md) — **implementar antes do Passo 4 abaixo** |
+| **3** | Tenant cobra clientes (PIX, faturas) | Passos 4–6 abaixo |
+| **4–5** | Automação WA + renovações | Passos 5–6 + jobs |
+
+O **núcleo `billing`** nasce na Fase 2.5 (`Invoice` com `scope: platform | tenant`). O Passo 4 deste guia passa a ser a **Fase 3** no [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md).
 
 ---
 
@@ -87,20 +99,23 @@ CRUD completo de cliente com N conexões.
 
 ---
 
-## Passo 4 — Billing + PIX adapter (semana 4–5)
+## Passo 4 — Billing tenant + PIX adapter (= **Fase 3**)
+
+> **Pré-requisito:** Fase **2.5** entregue (billing core + faturas `scope=platform`). Reutilizar o mesmo módulo com `scope=tenant`.
 
 ### Módulos
 
-- `billing` — `invoice`, `payment`, `tenant_payment_config`
-- `integrations/payment` — interface `PaymentProvider` + `AsaasPaymentProvider`
+- `billing` — `invoice`, `payment` (já existentes; filtrar `scope=tenant`)
+- `tenant_payment_config` — credenciais Asaas do revendedor
+- `integrations/payment` — `PaymentProvider` + factory (platform vs tenant)
 
-Ver [03-integrations-pix-whatsapp.md](./03-integrations-pix-whatsapp.md).
+Ver [03-integrations-pix-whatsapp.md](./03-integrations-pix-whatsapp.md) e [10-billing-dual-layer.md](./10-billing-dual-layer.md).
 
 ### Checklist
 
 - [ ] Criar fatura manual e automática (`billing_cycle_key`)
 - [ ] `POST /invoices/:id/charge-pix`
-- [ ] Webhook PIX com idempotência
+- [ ] Webhook `POST /api/webhooks/pix/:tenantSlug` com idempotência (P0.3)
 - [ ] Baixa manual `POST /payments` (method=manual)
 - [ ] Front: `/invoices`, `/payments`, aba no cliente
 

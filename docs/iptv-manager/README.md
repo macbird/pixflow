@@ -5,11 +5,12 @@ Documentação para implementar o sistema com **Cursor**, em **fases**, com **fr
 | Documento | Conteúdo |
 |-----------|----------|
 | [00-architecture-modular.md](./00-architecture-modular.md) | Monorepo, módulos, limites de dependência |
-| [01-phase-1-tenant-app.md](./01-phase-1-tenant-app.md) | Fase 1 — app do revendedor (checklist) |
-| [02-phase-2-admin-panel.md](./02-phase-2-admin-panel.md) | Fase 2 — painel admin plataforma |
+| [01-phase-1-tenant-app.md](./01-phase-1-tenant-app.md) | Fase 1 — app revendedor; passos 4+ = Fase 3 (billing tenant) |
+| [02-phase-2-admin-panel.md](./02-phase-2-admin-panel.md) | Fase 2 — painel admin (✅) + rotas/telas previstas 2.5 |
 | [03-integrations-pix-whatsapp.md](./03-integrations-pix-whatsapp.md) | PIX, WhatsApp, adapters |
 | [04-open-questions.md](./04-open-questions.md) | Decisões de produto (fechadas) |
 | [09-improvements-p0-p1.md](./09-improvements-p0-p1.md) | **Melhorias P0 + P1 (checklist)** |
+| [10-billing-dual-layer.md](./10-billing-dual-layer.md) | **Cobrança dupla: plataforma → tenant e tenant → cliente** |
 | [05-cursor-workflow.md](./05-cursor-workflow.md) | Como usar o Cursor neste projeto |
 | [06-pwa-responsive.md](./06-pwa-responsive.md) | **PWA + layout responsivo (obrigatório)** |
 | [07-mobile-cards-ux.md](./07-mobile-cards-ux.md) | **Listas em cards (não tabelas)** |
@@ -59,7 +60,8 @@ O que é “seu”: **regras, fluxos, filas, templates** — não a infraestrutu
 2. `00-architecture-modular.md`  
 3. `01-phase-1-tenant-app.md` — implementar **na ordem** dos passos  
 4. `09-improvements-p0-p1.md` — melhorias P0/P1 nos passos correspondentes  
-5. Spec: `CLIENTE-MANAGER-SPEC-TEMP.md` quando precisar de regra de negócio  
+5. `10-billing-dual-layer.md` — antes de implementar faturas/PIX (Fase 2.5 e 3)  
+6. Spec: `CLIENTE-MANAGER-SPEC-TEMP.md` quando precisar de regra de negócio  
 
 Ao abrir o Cursor no repositório `client-manager`, copie esta pasta `docs/client-manager` e o arquivo `.cursor/rules/client-manager.mdc` (ver [05-cursor-workflow.md](./05-cursor-workflow.md)).
 

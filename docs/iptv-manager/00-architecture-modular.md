@@ -7,7 +7,7 @@ client-manager/
 ├── apps/
 │   ├── api/                    # Backend Node
 │   ├── web/                    # Frontend revendedor (PWA)
-│   └── admin/                  # Frontend plataforma (Fase 2)
+│   └── (admin em apps/web)     # /admin/* — Fase 2 + Fase 2.5 (faturas SaaS)
 ├── packages/
 │   ├── shared/                 # Zod schemas, enums, tipos API
 │   └── eslint-config/          # opcional
@@ -47,15 +47,19 @@ apps/api/src/
 │   ├── connections/
 │   ├── plans/
 │   ├── servers/
-│   ├── billing/                # invoices, payments
-│   ├── automation/             # billing_automation_config, jobs
+│   ├── billing/                # invoices, payments (scope: platform | tenant)
+│   │   ├── invoice.service.ts
+│   │   ├── billing.routes.ts           # /api/invoices (tenant)
+│   │   └── platform-billing.routes.ts  # /api/admin/invoices (Fase 2.5)
+│   ├── automation/             # billing_automation_config, jobs (só scope=tenant)
 │   ├── renewals/               # server_renewal_task
 │   ├── messaging/              # templates, whatsapp provider
 │   ├── dashboard/
 │   ├── reports/                # daily report, post-payment report
 │   └── audit/
 └── workers/
-    ├── billing-automation.worker.ts
+    ├── platform-monthly-billing.job.ts   # Fase 2.5 — faturas SaaS
+    ├── billing-automation.worker.ts      # Fase 4 — só scope=tenant
     ├── daily-report.worker.ts
     └── message-sender.worker.ts
 ```
@@ -70,7 +74,9 @@ apps/api/src/
 
 **Entre domínios:** usar **eventos** (ex.: `PaymentConfirmed`) ou **port/interface** injetada no bootstrap.
 
-Exemplo: `billing` emite evento → `renewals` escuta e cria `server_renewal_task`.
+Exemplo: `billing` emite `PaymentConfirmed` → `renewals` escuta e cria `server_renewal_task` (**apenas** quando `invoice.scope = tenant`).
+
+**Cobrança em duas camadas:** mesmo módulo `billing`, discriminador `BillingScope` (`platform` | `tenant`). Ver [10-billing-dual-layer.md](./10-billing-dual-layer.md).
 
 ### Registro Fastify (exemplo)
 
@@ -104,17 +110,29 @@ apps/web/src/
 │   ├── automation/
 │   ├── renewals/
 │   ├── dashboard/
-│   ├── billing/
+│   ├── billing/                # /invoices, /payments (Fase 3)
 │   └── settings/
+├── features/admin/             # /admin/* — Fase 2 ✅; faturas SaaS Fase 2.5
 ├── shared/
 │   ├── ui/
 │   │   ├── lists/              # CardList, EntityCard, FilterSheet (OBRIGATÓRIO)
-│   │   └── ...                 # Button, Modal (shadcn)
+│   │   └── billing/            # InvoiceCard, CopyPixButton (Fase 2.5+3)
 │   ├── api/
 │   ├── hooks/
 │   └── lib/
 └── main.tsx
 ```
+
+**Integrações PIX (compartilhadas — Fase 2.5 + 3):**
+
+```
+apps/api/src/integrations/payment/
+├── payment-provider.interface.ts
+├── asaas.provider.ts
+└── payment-provider.factory.ts   # credencial platform vs tenant
+```
+
+Webhooks: `POST /api/webhooks/pix/platform` e `POST /api/webhooks/pix/:tenantSlug` — ver [10-billing-dual-layer.md](./10-billing-dual-layer.md).
 
 ### Regras (frontend)
 
@@ -130,7 +148,7 @@ apps/web/src/
 ```
 packages/shared/src/
 ├── schemas/          # Zod: CustomerCreate, InvoiceResponse
-├── enums/            # InvoiceStatus, RenewalStatus
+├── enums/            # InvoiceStatus, BillingScope, RenewalStatus
 └── constants/
 ```
 

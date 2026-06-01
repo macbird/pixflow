@@ -1,6 +1,8 @@
 # Melhorias P0 e P1 (Fase 1)
 
-Checklist de melhorias **recomendadas** para incluir na Fase 1. Integrar nos passos de [01-phase-1-tenant-app.md](./01-phase-1-tenant-app.md).
+Checklist de melhorias **recomendadas** para incluir na Fase 1 e fases de billing. Integrar nos passos de [01-phase-1-tenant-app.md](./01-phase-1-tenant-app.md).
+
+**Roadmap billing:** P0.3 e P0.5 aplicam-se a **ambos** os escopos (`platform` e `tenant`) — ver [10-billing-dual-layer.md](./10-billing-dual-layer.md). Implementação do webhook começa na **Fase 2.5** (plataforma) e repete o padrão na **Fase 3** (tenant).
 
 | Prioridade | Significado |
 |------------|-------------|
@@ -44,7 +46,8 @@ Checklist de melhorias **recomendadas** para incluir na Fase 1. Integrar nos pas
 |------|---------|
 | **O quê** | UNIQUE em `payment.provider_payment_id`; ignorar replay com mesmo ID |
 | **Por quê** | PSP pode reenviar webhook → baixa duplicada |
-| **Onde** | Módulo `billing` — Passo 4 |
+| **Onde** | Módulo `billing` — **Fase 2.5** (webhook platform) e **Fase 3** (webhook tenant) |
+| **Rotas** | `POST /api/webhooks/pix/platform` · `POST /api/webhooks/pix/:tenantSlug` |
 | **Log** | `audit_log` se tentativa duplicada |
 
 ---
@@ -177,23 +180,23 @@ phone: z.string().min(10).transform(normalizeBrazilPhoneE164)
 
 ---
 
-## Mapa: melhoria → passo Fase 1
+## Mapa: melhoria → fase
 
-| Melhoria | Passo |
-|----------|-------|
+| Melhoria | Fase / passo |
+|----------|----------------|
 | P0.1 Seed | 1 ou 8 |
 | P0.2 Health | 1 |
-| P0.3 Webhook idempotência | 4 |
-| P0.4 Audit log | 6–7 |
-| P0.5 Copiar PIX / wa.me | 3–6 |
-| P0.6 Telefone E.164 | 3 |
+| P0.3 Webhook idempotência | **2.5** (platform) + **3** (tenant) |
+| P0.4 Audit log | 5–6 (após billing) |
+| P0.5 Copiar PIX / wa.me | **2.5** (fatura SaaS) + **3–5** (cliente) |
+| P0.6 Telefone E.164 | 1 (passo 3) |
 | P0.7 Backup DB | 8 |
 | P1.1 PWA shortcuts | 1 / 8 |
-| P1.2 Pull-to-refresh | 3–6 |
-| P1.3 Busca global | 3 |
-| P1.4 Dashboard renovações | 7 |
-| P1.5 Notas no card | 3 |
-| P1.6 Pagamentos no detalhe | 4–6 |
+| P1.2 Pull-to-refresh | 1–5 |
+| P1.3 Busca global | 1 (passo 3) |
+| P1.4 Dashboard renovações | 5 |
+| P1.5 Notas no card | 1 (passo 3) |
+| P1.6 Pagamentos no detalhe | **3** (passo 4) |
 
 ---
 
@@ -220,9 +223,13 @@ phone: z.string().min(10).transform(normalizeBrazilPhoneE164)
 
 ---
 
-## Prompt Cursor (lote P0)
+## Prompt Cursor (lote P0 — billing)
 
-> Implemente melhorias P0 de docs/client-manager/09-improvements-p0-p1.md no escopo atual: health check, seed, idempotência webhook, audit log, telefone E.164, copiar PIX e wa.me nos cards. Modular, sem monolito.
+> Implemente P0.3 e P0.5 conforme docs/iptv-manager/10-billing-dual-layer.md na Fase 2.5: webhook platform idempotente, copiar PIX nas faturas admin. Reutilize o mesmo padrão na Fase 3 para tenant.
+
+## Prompt Cursor (lote P0 — geral)
+
+> Implemente melhorias P0 de docs/client-manager/09-improvements-p0-p1.md no escopo atual: health check (+ DB), seed, telefone E.164, audit log quando billing existir. Modular, sem monolito.
 
 ## Prompt Cursor (lote P1)
 
