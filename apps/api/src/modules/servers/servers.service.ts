@@ -60,8 +60,9 @@ export class ServersService {
       where: { id, tenantId },
     });
 
-    return await prisma.server.delete({
-      where: { id },
+    return await prisma.$transaction(async (tx) => {
+      await tx.connection.deleteMany({ where: { serverId: id } });
+      return await tx.server.delete({ where: { id } });
     });
   }
 }

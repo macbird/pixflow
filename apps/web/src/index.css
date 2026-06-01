@@ -27,3 +27,46 @@ body {
 h1, h2, h3 {
   color: #0f172a; /* Slate-900 */
 }
+
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modal-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modal-backdrop-in 0.2s ease-out;
+}
+
+.animate-modal-sheet {
+  animation: modal-sheet-in 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.animate-modal-dialog {
+  animation: modal-dialog-in 0.22s ease-out;
+}

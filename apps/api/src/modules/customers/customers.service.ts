@@ -130,8 +130,9 @@ export class CustomersService {
       where: { id, tenantId },
     });
 
-    return await this.db.customer.delete({
-      where: { id },
+    return await prisma.$transaction(async (tx) => {
+      await tx.connection.deleteMany({ where: { customerId: id } });
+      return await tx.customer.delete({ where: { id } });
     });
   }
 }

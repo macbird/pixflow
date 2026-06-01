@@ -156,9 +156,9 @@ model Customer {
 model Connection {
   id              String   @id @default(uuid())
   customerId      String
-  customer        Customer @relation(fields: [customerId], references: [id])
+  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   serverId        String
-  server          Server   @relation(fields: [serverId], references: [id])
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   macAddress      String
   applicationName String
   label           String?  // Novo campo para o apelido/referência
