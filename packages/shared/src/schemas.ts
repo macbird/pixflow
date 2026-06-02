@@ -72,3 +72,31 @@ export const customerSchema = z.object({
 });
 
 export type CustomerInput = z.infer<typeof customerSchema>;
+
+const paymentProviderEnum = z.enum(['asaas', 'efi', 'mercadopago']);
+
+export const tenantPaymentCredentialSchema = z.object({
+  provider: paymentProviderEnum,
+  apiKey: z.string().optional(),
+  webhookToken: z.string().optional(),
+  active: z.boolean().optional(),
+});
+
+export const tenantPaymentRoutingRuleSchema = z.object({
+  minAmountCents: z.number().int().min(0),
+  provider: paymentProviderEnum,
+  active: z.boolean().optional(),
+});
+
+export const updateTenantPaymentCredentialsSchema = z.object({
+  credentials: z.array(tenantPaymentCredentialSchema).min(1),
+});
+
+export const updateTenantPaymentRoutingSchema = z.object({
+  rules: z.array(tenantPaymentRoutingRuleSchema).min(1),
+});
+
+export type UpdateTenantPaymentCredentialsInput = z.infer<
+  typeof updateTenantPaymentCredentialsSchema
+>;
+export type UpdateTenantPaymentRoutingInput = z.infer<typeof updateTenantPaymentRoutingSchema>;

@@ -106,16 +106,17 @@ CRUD completo de cliente com N conexões.
 ### Módulos
 
 - `billing` — `invoice`, `payment` (já existentes; filtrar `scope=tenant`)
-- `tenant_payment_config` — credenciais Asaas do revendedor
-- `integrations/payment` — `PaymentProvider` + factory (platform vs tenant)
+- `tenant_payment_credentials` — N credenciais PSP por revendedor (Asaas, Mercado Pago, …)
+- `tenant_payment_routing_rules` — limiares por `amountCents` (ex.: anual → Asaas fixo; mensal → percentual)
+- `integrations/payment` — `PaymentRouter` + factory multi-PSP
 
 Ver [03-integrations-pix-whatsapp.md](./03-integrations-pix-whatsapp.md) e [10-billing-dual-layer.md](./10-billing-dual-layer.md).
 
 ### Checklist
 
 - [ ] Criar fatura manual e automática (`billing_cycle_key`)
-- [ ] `POST /invoices/:id/charge-pix`
-- [ ] Webhook `POST /api/webhooks/pix/:tenantSlug` com idempotência (P0.3)
+- [ ] `POST /invoices/:id/charge-pix` — router escolhe PSP por `amountCents`
+- [ ] Webhook `POST /api/webhooks/pix/:tenantSlug/:provider` com idempotência (P0.3)
 - [ ] Baixa manual `POST /payments` (method=manual)
 - [ ] Front: `/invoices`, `/payments`, aba no cliente
 

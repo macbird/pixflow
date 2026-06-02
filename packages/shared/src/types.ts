@@ -43,12 +43,34 @@ export interface TenantSettingsDto {
     apiKeyConfigured: boolean;
     webhookTokenConfigured: boolean;
   };
+  paymentCredentials: TenantPaymentCredentialDto[];
+  paymentRouting: TenantPaymentRoutingRuleDto[];
   whatsapp: {
     provider: string;
     instanceUrl: string | null;
     apiKeyConfigured: boolean;
   };
   subscription: TenantSubscriptionDto | null;
+}
+
+export interface TenantPaymentCredentialDto {
+  provider: string;
+  apiKeyConfigured: boolean;
+  webhookTokenConfigured: boolean;
+  active: boolean;
+}
+
+export interface TenantPaymentRoutingRuleDto {
+  id: string;
+  minAmountCents: number;
+  provider: string;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface PaymentRoutingPreviewDto {
+  amountCents: number;
+  provider: string;
 }
 
 export interface TenantSubscriptionDto {
@@ -110,6 +132,7 @@ export interface InvoiceDetailDto {
   status: string;
   pixCopyPaste: string | null;
   paidAt: string | null;
+  paymentProvider: string | null;
   providerChargeId: string | null;
   createdAt: string;
   updatedAt: string;

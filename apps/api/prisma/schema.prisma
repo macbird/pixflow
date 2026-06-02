@@ -93,6 +93,8 @@ model Account {
   customers              Customer[]
   subscription           AccountSubscription?
   tenantPaymentConfig    TenantPaymentConfig?
+  tenantPaymentCredentials TenantPaymentCredential[]
+  tenantPaymentRoutingRules TenantPaymentRoutingRule[]
   tenantWhatsappConfig   TenantWhatsappConfig?
   invoices               Invoice[]
 
@@ -263,6 +265,36 @@ model AccountSubscription {
   @@map("account_subscriptions")
 }
 
+model TenantPaymentCredential {
+  id           String              @id @default(uuid())
+  accountId    String
+  account      Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  provider     PaymentProviderType
+  apiKey       String?
+  webhookToken String?
+  active       Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([accountId, provider])
+  @@map("tenant_payment_credentials")
+}
+
+model TenantPaymentRoutingRule {
+  id             String              @id @default(uuid())
+  accountId      String
+  account        Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  minAmountCents Int
+  provider       PaymentProviderType
+  sortOrder      Int                 @default(0)
+  active         Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([accountId, minAmountCents])
+  @@map("tenant_payment_routing_rules")
+}
+
 model TenantPaymentConfig {
   id           String              @id @default(uuid())
   accountId    String              @unique
@@ -298,6 +330,7 @@ model Invoice {
   amountCents       Int
   dueDate           DateTime
   status            BillingInvoiceStatus @default(open)
+  paymentProvider   PaymentProviderType?
   pixCopyPaste      String?
   pixQrCodeBase64   String?
   providerChargeId  String?              @unique

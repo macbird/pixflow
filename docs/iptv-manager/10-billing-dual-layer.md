@@ -28,31 +28,67 @@ Toda fatura tem:
 | `billingCycleKey` | `2026-06` | `2026-06` |
 | `dueDate` | calculado por `due_day` da assinatura | `due_day` do cliente ou ciclo |
 | `status` | draft → open → paid / overdue / canceled | idem |
+| `paymentProvider` | PSP usado na cobrança (persistido ao gerar PIX) | idem — **escolhido por roteamento de valor** |
 
 **Pagamento** referencia `invoiceId`, guarda `providerPaymentId` (UNIQUE, P0.3), método `pix | manual`.
 
 ---
 
-## Configuração PIX (duas contas PSP)
+## Configuração PIX (credenciais + roteamento por valor)
+
+### Camadas de config
 
 | Config | Onde | Quem paga taxa PSP |
 |--------|------|---------------------|
-| `platform_payment_config` | 1 registro global (env ou tabela) | Conta Asaas **sua** (plataforma) |
-| `tenant_payment_config` | 1 por `accountId` | Conta Asaas **do revendedor** |
+| `platform_payment_config` | 1 registro global | Conta PSP **sua** (plataforma) |
+| `tenant_payment_credentials` | N por `accountId` + `provider` | Contas PSP **do revendedor** (Asaas, Efi, Mercado Pago, …) |
+| `tenant_payment_routing_rules` | N por `accountId`, ordenadas por `minAmountCents` | Define **qual PSP** usar conforme o valor da fatura |
 
-O adapter não muda — muda só **qual credencial** o factory carrega:
+> **Legado:** `tenant_payment_config` (1 provider por tenant) permanece até migração; novos fluxos usam credenciais múltiplas + regras.
+
+### Por que roteamento por valor (não por cliente nem por plano)
+
+| Decisão | Onde configurar | Motivo |
+|---------|-----------------|--------|
+| **Quanto cobrar** | `Plan.price`, fatura manual, ciclo anual | Preço do produto |
+| **Qual PSP usar** | Regras por `amountCents` | Otimizar taxa (fixa vs percentual) |
+| **Qual plano o cliente tem** | `Customer.planId` | Define o valor que entra na fatura |
+
+**Caso típico:** mensalidade baixa (R$ 35) → PSP percentual (~R$ 0,70); pagamento anual alto (R$ 400+) → Asaas taxa fixa (R$ 1,99/cobrança).
+
+O roteamento olha **`Invoice.amountCents` no momento de `generatePix`**, não o cadastro do cliente. Plano anual entra indiretamente porque gera fatura com valor maior.
+
+### Regras de roteamento (tenant)
+
+Regras avaliadas em ordem decrescente de `minAmountCents` (maior limiar primeiro). A primeira regra que satisfizer `amountCents >= minAmountCents` vence; se nenhuma bater, usa a regra com `minAmountCents = 0` (default).
+
+Exemplo:
+
+| minAmountCents | provider | Uso |
+|----------------|----------|-----|
+| `15000` (R$ 150) | `asaas` | Anuais, valores altos — taxa fixa |
+| `0` | `mercadopago` | Mensalidades — taxa percentual |
 
 ```typescript
+// integrations/payment/payment-router.service.ts
+resolveProvider({ scope, accountId, amountCents }): PaymentProviderType
+
 // integrations/payment/payment-provider.factory.ts
-getProvider({ scope, accountId }): PaymentProvider
+getProvider({ scope, accountId, provider }): PaymentProvider
 ```
 
-Webhooks:
+**Invariantes:**
+
+1. Ao gerar PIX, gravar `Invoice.paymentProvider` + `providerChargeId` — **nunca trocar PSP** depois que a cobrança existir no PSP.
+2. Cancelamento/recriação de fatura usa o **mesmo** `paymentProvider` da fatura original (ou nova fatura passa pelo router de novo com novo `amountCents`).
+3. Webhook reconcilia via `providerChargeId` → invoice → adapter do `paymentProvider` persistido.
+
+### Webhooks
 
 | Rota | Escopo |
 |------|--------|
 | `POST /api/webhooks/pix/platform` | Faturas `scope=platform` |
-| `POST /api/webhooks/pix/:tenantSlug` | Faturas `scope=tenant` |
+| `POST /api/webhooks/pix/:tenantSlug/:provider` | Faturas `scope=tenant` — `:provider` valida origem (asaas, mercadopago, …) |
 
 Ambos: idempotência por `provider_payment_id`, audit log, evento interno `PaymentConfirmed`.
 
@@ -73,7 +109,8 @@ Ambos: idempotência por `provider_payment_id`, audit log, evento interno `Payme
 |----------|---------------|--------------|
 | **Preço do app (SaaS)** | **Admin** em Configurações (`PlatformPlan` / valor mensal da plataforma) | Tenant: **somente leitura** em Configurações → “Minha assinatura” |
 | **Preço cobrado do cliente final** | **Tenant** em **Planos** (`/plans` — já existe `Plan.price`) | Faturas `scope=tenant` usam o plano vinculado ao `customer` |
-| **Providers (PIX / WhatsApp)** | Cada lado configura o **seu** PSP | Admin: credencial plataforma · Tenant: credencial revenda |
+| **Providers (PIX / WhatsApp)** | Cada lado configura credenciais PSP | Admin: 1 credencial plataforma · Tenant: **N credenciais** + **regras por valor** |
+| **Roteamento PSP (taxa)** | Tenant em Configurações → Roteamento | Preview: “R$ 35 → Mercado Pago · R$ 420 → Asaas” |
 
 Ou seja: na tela de configurações do **tenant não se edita o valor do Cliente Manager** — esse valor vem do **plano SaaS** que o admin atribuiu à conta. O tenant edita em **Planos** quanto cobra dos **clientes IPTV**.
 
@@ -89,16 +126,18 @@ flowchart LR
   end
   subgraph tenant [Tenant /settings]
     T1[Minha assinatura - read-only]
-    T2[Provider PIX revenda]
-    T3[Provider WhatsApp revenda]
-    T4[Automação D-N - Fase 4]
+    T2[Credenciais PIX - multi PSP]
+    T3[Roteamento por valor]
+    T4[Provider WhatsApp revenda]
+    T5[Automação D-N - Fase 4]
   end
 ```
 
 | Seção | Admin | Tenant |
 |-------|-------|--------|
 | **Preço / plano SaaS** | Editar valor mensal (ou planos Starter/Pro), `due_day` default, trial | Exibir: “Você paga R$ X/mês — Plano Y”, próximo vencimento, link copiar PIX da fatura SaaS |
-| **PIX — provider** | Select: `asaas` \| `efi` \| `mercadopago` + API key, webhook secret (mascarado) | Idem, gravado em `tenant_payment_config` |
+| **PIX — credenciais** | Select provider + API key + webhook secret (mascarado) | **Lista** de PSPs configurados (`tenant_payment_credentials`) |
+| **PIX — roteamento** | Opcional (plataforma com 1 PSP) | Limiares em R$ → provider; simulador de taxa (opcional) |
 | **WhatsApp — provider** | Opcional (avisos plataforma) | `evolution` \| `meta` + URL/token instância |
 | **Automação** | — | Dias antes do vencimento, horário, template (Fase 4) |
 | **Equipe** | — | `account_user` convites (backlog) |
@@ -108,7 +147,9 @@ flowchart LR
 | Escopo | API |
 |--------|-----|
 | Plataforma | `GET/PATCH /api/admin/platform-settings` (preço, provider, credenciais criptografadas) |
-| Tenant | `GET/PATCH /api/settings` (só `tenant_payment_config`, whatsapp, automation) |
+| Tenant | `GET/PATCH /api/settings` (whatsapp, automation) |
+| Tenant (credenciais PIX) | `GET/PUT /api/settings/payment-credentials` — CRUD por `provider` |
+| Tenant (roteamento) | `GET/PUT /api/settings/payment-routing` — regras `minAmountCents` → `provider` |
 | Tenant (assinatura) | `GET /api/settings/subscription` — read-only: plano SaaS, valor, status, próxima fatura |
 
 **Segurança:** API keys nunca retornam em claro após salvar (só `••••` + botão “substituir”). Secrets no banco criptografados (coluna ou app-level).
@@ -121,7 +162,8 @@ features/settings/
 ├── sections/
 │   ├── PlatformPricingSection.tsx   # só admin
 │   ├── MySubscriptionSection.tsx    # só tenant (read-only)
-│   ├── PaymentProviderSection.tsx   # ambos (scope via API)
+│   ├── PaymentCredentialsSection.tsx   # lista de PSPs + API keys (tenant multi; admin single)
+│   ├── PaymentRoutingSection.tsx       # só tenant — limiares por valor
 │   └── WhatsAppProviderSection.tsx
 └── api/settings.api.ts
 ```
@@ -145,7 +187,58 @@ Admin registra rota em `App.tsx` sob `AdminShell`; tenant sob `AppShell` — **m
 | `evolution` | Evolution API | ✅ Fase 4 |
 | `meta` | WhatsApp Business API | futuro |
 
-O factory em runtime lê `provider` da config e instancia o adapter correto.
+Na geração do PIX, o **router** escolhe o `provider`; o **factory** carrega credencial e instancia o adapter.
+
+---
+
+## Roteamento de PSP por valor — detalhe
+
+### Fluxo na geração do PIX
+
+```mermaid
+sequenceDiagram
+  participant UI as Invoice / Job
+  participant Inv as InvoiceService
+  participant Router as PaymentRouter
+  participant Factory as ProviderFactory
+  participant PSP as Asaas ou Mercado Pago
+
+  UI->>Inv: generatePix(invoiceId)
+  Inv->>Inv: carrega Invoice.amountCents
+  Inv->>Router: resolveProvider(accountId, amountCents)
+  Router->>Router: avalia tenant_payment_routing_rules
+  Router-->>Inv: provider = asaas | mercadopago
+  Inv->>Factory: getProvider(accountId, provider)
+  Factory->>PSP: createPixCharge
+  PSP-->>Inv: providerChargeId, copyPaste, qrCode
+  Inv->>Inv: update Invoice.paymentProvider + pix fields
+```
+
+### Matemática de taxa (referência para UI)
+
+| PSP | Modelo típico | Melhor para |
+|-----|---------------|-------------|
+| Asaas | ~R$ 1,99 fixo/cobrança PIX | Valores **altos** (anual, pacotes) |
+| Mercado Pago / Efi | ~% + fixo pequeno | Valores **baixos** (mensalidade) |
+
+Ponto de equilíbrio (exemplo com 2%): `1,99 / 0,02 ≈ R$ 99,50` — acima disso, taxa fixa tende a ganhar. O limiar real fica **configurável por tenant** em `/settings`.
+
+### O que **não** fazer
+
+| Abordagem | Por quê evitar |
+|-----------|----------------|
+| Provider por `Customer` | Mesmo cliente pode ter mensal barato e cobrança anual alta |
+| Provider fixo por `Plan` | Promoção, conexão extra e fatura manual mudam `amountCents` |
+| Trocar PSP após PIX gerado | Quebra `providerChargeId` e webhook |
+
+### Plano anual e valor da fatura
+
+| Opção | Comportamento |
+|-------|---------------|
+| `Plan.billingCycle = yearly` | Job/fatura usa `price × 12` ou campo `yearlyPriceCents` dedicado |
+| Fatura manual | `amountCents` informado na criação — router aplica na hora |
+
+Em todos os casos, a decisão de PSP é sempre **`amountCents` da fatura**, não o plano em si.
 
 ---
 
@@ -191,20 +284,44 @@ enum InvoiceStatus {
   canceled
 }
 
+model TenantPaymentCredential {
+  id           String              @id @default(uuid())
+  accountId    String
+  provider     PaymentProviderType
+  apiKey       String?             // criptografada
+  webhookToken String?
+  active       Boolean             @default(true)
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([accountId, provider])
+}
+
+model TenantPaymentRoutingRule {
+  id             String              @id @default(uuid())
+  accountId      String
+  minAmountCents Int                 // avaliar DESC; 0 = fallback
+  provider       PaymentProviderType
+  sortOrder      Int                 @default(0)
+  active         Boolean             @default(true)
+
+  @@index([accountId, minAmountCents])
+}
+
 model Invoice {
-  id               String        @id @default(uuid())
+  id               String              @id @default(uuid())
   scope            BillingScope
   accountId        String
-  customerId       String?       // null se scope=platform
-  billingCycleKey  String        // YYYY-MM
+  customerId       String?             // null se scope=platform
+  billingCycleKey  String              // YYYY-MM
   amountCents      Int
   dueDate          DateTime
-  status           InvoiceStatus @default(draft)
+  status           InvoiceStatus       @default(draft)
+  paymentProvider  PaymentProviderType? // setado ao gerar PIX; usado no webhook
   pixCopyPaste     String?
   pixQrCode        String?
-  providerChargeId String?       @unique
+  providerChargeId String?             @unique
   paidAt           DateTime?
-  createdAt        DateTime      @default(now())
+  createdAt        DateTime            @default(now())
   payments         Payment[]
   @@unique([scope, accountId, customerId, billingCycleKey])
 }
@@ -261,6 +378,12 @@ sequenceDiagram
 
 Mesmo `Invoice` com `scope=tenant` + `customerId`. Automação D-N (Fase 4) só enxerga faturas `scope=tenant`.
 
+Ao gerar PIX:
+
+1. `amountCents` vem do plano do cliente, ciclo anual ou fatura manual.
+2. `PaymentRouter` escolhe PSP (ex.: R$ 35 → percentual; R$ 420 → Asaas).
+3. Fatura exibe badge do provider na UI (`/invoices/:id`).
+
 Após `PaymentConfirmed` (tenant scope) → evento → `renewals` cria `server_renewal_task`.
 
 **Plataforma:** pagamento confirmado **não** cria renovação de servidor — apenas mantém tenant ativo.
@@ -299,6 +422,9 @@ apps/api/src/modules/billing/
 apps/api/src/integrations/payment/
 ├── payment-provider.interface.ts
 ├── asaas.provider.ts
+├── mercadopago.provider.ts   # ou efi.provider.ts — PSP percentual
+├── payment-router.service.ts   # resolve provider por amountCents
+├── payment-fee.util.ts         # opcional: preview de taxa na UI
 └── payment-provider.factory.ts
 
 apps/api/src/jobs/
@@ -322,9 +448,12 @@ apps/api/src/jobs/
 
 ### Fase 3 — MVP tenant
 
-1. `tenant_payment_config` + webhook por slug
-2. CRUD fatura manual + automática por cliente
-3. Front `/invoices`, `/payments`, P1.6 aba no cliente
+1. Migration: `tenant_payment_credentials`, `tenant_payment_routing_rules`, `Invoice.paymentProvider`
+2. Migrar dados de `tenant_payment_config` → credenciais (compatibilidade)
+3. `PaymentRouter` + factory multi-PSP + webhook por slug **e** provider
+4. CRUD fatura manual + automática por cliente (router na geração PIX)
+5. **`/settings`**: credenciais multi-PSP + editor de roteamento por valor
+6. Front `/invoices`, `/payments` — badge PSP no detalhe; P1.6 aba no cliente
 
 ### Depois
 
@@ -340,9 +469,13 @@ apps/api/src/jobs/
 3. **Trial:** conta nova tem 7 dias sem fatura?
 4. **Tenant vê fatura SaaS** no app dele ou só recebe e-mail/WhatsApp?
 5. **Nota fiscal:** fora do escopo MVP (só controle interno + PIX)?
+6. **Limiar default de roteamento:** ex. R$ 150 configurável; seed inicial por tenant?
+7. **Segundo PSP (percentual):** Mercado Pago ou Efi primeiro no MVP tenant?
+8. **Plataforma (SaaS):** roteamento multi-PSP só no tenant ou também admin → tenant?
+9. **Plano anual:** `yearlyPriceCents` no `Plan` ou `price × 12` automático?
 
 ---
 
 ## Prompt Cursor (quando for implementar)
 
-> Implemente Fase 2.5 conforme docs/iptv-manager/10-billing-dual-layer.md: migrations Invoice/Payment com BillingScope, módulo billing, Asaas platform config, webhook idempotente, rotas admin /api/admin/invoices, job mensal. Reutilize PageLayout, usePaginatedList e padrão PIX da doc 03. Não acople customers ao billing — use eventos.
+> Implemente Fase 3 (tenant PIX) conforme docs/iptv-manager/10-billing-dual-layer.md: migrations `TenantPaymentCredential`, `TenantPaymentRoutingRule`, `Invoice.paymentProvider`; `PaymentRouter` por `amountCents`; factory multi-PSP; webhooks idempotentes por tenant+provider; settings com credenciais e roteamento; `generatePix` real substituindo stub. Reutilize PageLayout e padrão PIX da doc 03. Não acople customers ao billing — use eventos.

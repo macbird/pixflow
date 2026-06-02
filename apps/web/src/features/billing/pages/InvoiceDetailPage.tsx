@@ -10,8 +10,10 @@ import { DetailGrid, DetailItem, DetailSection } from '../components/BillingDeta
 import { formatCents, formatPaymentMethod } from '../../../shared/ui/billing/format-billing';
 import {
   BILLING_INVOICE_STATUS_LABELS,
+  PAYMENT_PROVIDER_LABELS,
   getBillingInvoiceStatusBadgeClass,
   type BillingInvoiceStatusValue,
+  type PaymentProviderValue,
 } from '@client-manager/shared';
 import { showToast } from '../../../shared/utils/toast';
 
@@ -242,6 +244,15 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
               <DetailItem
                 label="Pago em"
                 value={new Date(invoice.paidAt).toLocaleString('pt-BR')}
+              />
+            ) : null}
+            {invoice.paymentProvider ? (
+              <DetailItem
+                label="Provider PIX"
+                value={
+                  PAYMENT_PROVIDER_LABELS[invoice.paymentProvider as PaymentProviderValue] ??
+                  invoice.paymentProvider
+                }
               />
             ) : null}
             <DetailItem label="ID da fatura" value={invoice.id} className="sm:col-span-2" />

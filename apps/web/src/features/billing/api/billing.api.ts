@@ -68,6 +68,29 @@ export const tenantBillingApi = {
     const { data } = await api.patch('/settings', payload);
     return data;
   },
+  updatePaymentCredentials: async (payload: {
+    credentials: Array<{
+      provider: string;
+      active?: boolean;
+      apiKey?: string;
+      webhookToken?: string;
+    }>;
+  }) => {
+    const { data } = await api.put('/settings/payment-credentials', payload);
+    return data;
+  },
+  updatePaymentRouting: async (payload: {
+    rules: Array<{ minAmountCents: number; provider: string; active?: boolean }>;
+  }) => {
+    const { data } = await api.put('/settings/payment-routing', payload);
+    return data;
+  },
+  previewPaymentRouting: async (amountCents: number) => {
+    const { data } = await api.get('/settings/payment-routing/preview', {
+      params: { amountCents },
+    });
+    return data;
+  },
   listInvoices: async (
     params: PaginatedListParams,
   ): Promise<PaginatedResponse<InvoiceListItem>> => {

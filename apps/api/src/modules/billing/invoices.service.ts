@@ -1,8 +1,10 @@
 import { prisma } from '../../core/database';
-import type { BillingScope, BillingInvoiceStatus } from '@prisma/client';
+import type { BillingScope, BillingInvoiceStatus, PaymentProviderType } from '@prisma/client';
 import { InvoiceActionError } from './invoice-errors';
+import { PaymentRouterService } from '../../integrations/payment/payment-router.service';
 
 const CANCELABLE_STATUSES: BillingInvoiceStatus[] = ['draft', 'open', 'overdue'];
+const paymentRouter = new PaymentRouterService();
 
 export class InvoicesService {
   private invoiceWhere(scope: BillingScope, accountId: string | null, invoiceId: string) {
@@ -22,6 +24,7 @@ export class InvoicesService {
     status: BillingInvoiceStatus;
     pixCopyPaste: string | null;
     paidAt: Date | null;
+    paymentProvider: PaymentProviderType | null;
     providerChargeId: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -53,6 +56,7 @@ export class InvoicesService {
       status: row.status,
       pixCopyPaste: row.pixCopyPaste,
       paidAt: row.paidAt?.toISOString() ?? null,
+      paymentProvider: row.paymentProvider,
       providerChargeId: row.providerChargeId,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
@@ -314,6 +318,11 @@ export class InvoicesService {
       throw new Error('Invoice canceled');
     }
 
+    const paymentProvider = await paymentRouter.resolveForTenant(
+      invoice.accountId,
+      invoice.amountCents,
+    );
+
     const fakePix = `00020126580014BR.GOV.BCB.PIX0136${invoice.id}520400005303986540${(
       invoice.amountCents / 100
     ).toFixed(2)}5802BR5925CLIENTE MANAGER6009SAO PAULO62070503***6304ABCD`;
@@ -322,7 +331,8 @@ export class InvoicesService {
       where: { id: invoiceId },
       data: {
         pixCopyPaste: fakePix,
-        providerChargeId: `stub_${invoiceId}`,
+        paymentProvider,
+        providerChargeId: `stub_${paymentProvider}_${invoiceId}`,
         status: invoice.status === 'draft' ? 'open' : invoice.status,
       },
     });

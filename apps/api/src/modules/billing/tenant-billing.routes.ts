@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requireTenantId } from '../../core/middleware/require-tenant';
 import { TenantSettingsService } from './tenant-settings.service';
+import { TenantPaymentSettingsService } from './tenant-payment-settings.service';
 import { InvoicesService } from './invoices.service';
 import { PaymentsService } from './payments.service';
 import { handleInvoiceActionError } from './invoice-route.util';
@@ -10,6 +11,7 @@ const INVOICE_LIST_FILTER_KEYS = ['status', 'billingCycleKey', 'dueFrom', 'dueTo
 const PAYMENT_LIST_FILTER_KEYS = ['method', 'billingCycleKey', 'paidFrom', 'paidTo'] as const;
 
 const tenantSettings = new TenantSettingsService();
+const tenantPaymentSettings = new TenantPaymentSettingsService();
 const invoicesService = new InvoicesService();
 const paymentsService = new PaymentsService();
 
@@ -40,6 +42,50 @@ export async function tenantBillingRoutes(app: FastifyInstance) {
     const tenantId = requireTenantId(request, reply);
     if (!tenantId) return;
     return tenantSettings.getSubscription(tenantId);
+  });
+
+  app.get('/settings/payment-credentials', async (request, reply) => {
+    const tenantId = requireTenantId(request, reply);
+    if (!tenantId) return;
+    return tenantPaymentSettings.listCredentials(tenantId);
+  });
+
+  app.put('/settings/payment-credentials', async (request, reply) => {
+    const tenantId = requireTenantId(request, reply);
+    if (!tenantId) return;
+    try {
+      return await tenantPaymentSettings.updateCredentials(tenantId, request.body);
+    } catch (error) {
+      return reply.status(400).send({ message: (error as Error).message });
+    }
+  });
+
+  app.get('/settings/payment-routing', async (request, reply) => {
+    const tenantId = requireTenantId(request, reply);
+    if (!tenantId) return;
+    return tenantPaymentSettings.listRoutingRules(tenantId);
+  });
+
+  app.put('/settings/payment-routing', async (request, reply) => {
+    const tenantId = requireTenantId(request, reply);
+    if (!tenantId) return;
+    try {
+      return await tenantPaymentSettings.updateRoutingRules(tenantId, request.body);
+    } catch (error) {
+      return reply.status(400).send({ message: (error as Error).message });
+    }
+  });
+
+  app.get('/settings/payment-routing/preview', async (request, reply) => {
+    const tenantId = requireTenantId(request, reply);
+    if (!tenantId) return;
+    const { amountCents } = request.query as { amountCents?: string };
+    const cents = parseInt(amountCents || '0', 10);
+    try {
+      return await tenantPaymentSettings.previewRouting(tenantId, cents);
+    } catch (error) {
+      return reply.status(400).send({ message: (error as Error).message });
+    }
   });
 
   app.get('/invoices', async (request, reply) => {

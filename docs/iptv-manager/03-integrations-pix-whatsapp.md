@@ -20,11 +20,15 @@ Seu **módulo de pagamento interno**:
 ```
 integrations/payment/
 ├── payment-provider.interface.ts
-├── asaas.provider.ts
-├── efi.provider.ts          # futuro
-├── mercadopago.provider.ts  # futuro
-└── payment-provider.factory.ts   # lê tenant_payment_config
+├── asaas.provider.ts              # taxa fixa — valores altos
+├── efi.provider.ts                # futuro — percentual
+├── mercadopago.provider.ts        # percentual — valores baixos
+├── payment-router.service.ts      # escolhe PSP por amountCents
+├── payment-fee.util.ts            # opcional: preview de taxa
+└── payment-provider.factory.ts    # credencial por accountId + provider
 ```
+
+Ver roteamento completo em [10-billing-dual-layer.md](./10-billing-dual-layer.md#roteamento-de-psp-por-valor--detalhe).
 
 Responsabilidades **suas**:
 
@@ -40,9 +44,10 @@ Responsabilidades **suas**:
 
 ### Por onde começar (custo baixo)
 
-1. Conta **sandbox Asaas**  
-2. Implementar só `AsaasPaymentProvider`  
-3. Webhook: `POST /api/webhooks/pix/:tenantSlug`  
+1. Conta **sandbox Asaas** + segundo PSP (Mercado Pago ou Efi)  
+2. Implementar `AsaasPaymentProvider` + adapter percentual  
+3. `PaymentRouter`: limiar configurável por tenant (`tenant_payment_routing_rules`)  
+4. Webhook: `POST /api/webhooks/pix/:tenantSlug/:provider`  
 
 ---
 
@@ -127,7 +132,14 @@ export interface WhatsAppProvider {
 
 | Tabela | Uso |
 |--------|-----|
-| `tenant_payment_config` | provider, api_key (criptografada), webhook_secret |
+| `tenant_payment_credentials` | N credenciais por tenant: `(accountId, provider)` → api_key, webhook_secret |
+| `tenant_payment_routing_rules` | Limiares `minAmountCents` → `provider` (roteamento por valor da fatura) |
+| `tenant_payment_config` | **Legado** — migrar para `tenant_payment_credentials` |
 | `tenant_whatsapp_config` | Evolution instance URL, token |
+
+| Campo em `Invoice` | Uso |
+|--------------------|-----|
+| `paymentProvider` | PSP usado na cobrança — setado ao gerar PIX; webhook usa para escolher adapter |
+| `providerChargeId` | ID da cobrança no PSP |
 
 Nunca commitar secrets; usar `.env` só para infra (DB, Redis), credenciais PSP **no banco por tenant**.

@@ -1,5 +1,8 @@
 import { prisma } from '../../core/database';
 import type { PaymentProviderType, WhatsAppProviderType } from '@prisma/client';
+import { TenantPaymentSettingsService } from './tenant-payment-settings.service';
+
+const tenantPaymentSettings = new TenantPaymentSettingsService();
 
 export class TenantSettingsService {
   async getSubscription(tenantId: string) {
@@ -29,9 +32,11 @@ export class TenantSettingsService {
   }
 
   async get(tenantId: string) {
-    const [payment, whatsapp] = await Promise.all([
+    const [payment, whatsapp, paymentCredentials, paymentRouting] = await Promise.all([
       prisma.tenantPaymentConfig.findUnique({ where: { accountId: tenantId } }),
       prisma.tenantWhatsappConfig.findUnique({ where: { accountId: tenantId } }),
+      tenantPaymentSettings.listCredentials(tenantId),
+      tenantPaymentSettings.listRoutingRules(tenantId),
     ]);
 
     return {
@@ -40,6 +45,8 @@ export class TenantSettingsService {
         apiKeyConfigured: Boolean(payment?.apiKey),
         webhookTokenConfigured: Boolean(payment?.webhookToken),
       },
+      paymentCredentials,
+      paymentRouting,
       whatsapp: {
         provider: whatsapp?.provider ?? 'evolution',
         instanceUrl: whatsapp?.instanceUrl ?? null,

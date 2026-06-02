@@ -1,6 +1,6 @@
 # Status da Implementação — Cliente Manager
 
-Documento vivo: última atualização após núcleo de billing (Fase 2.5/3 parcial), filtros de listagem e cancelamento/recriação de faturas.
+Documento vivo: última atualização após **roteamento de PSP por valor** (credenciais multi-PSP, regras, UI em `/settings`, `PaymentRouter` no stub de PIX).
 
 Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [09-improvements-p0-p1.md](./09-improvements-p0-p1.md)
 
@@ -17,7 +17,7 @@ Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [09-impro
 | **4** | Automação D-N + WhatsApp | 📋 Planejada |
 | **5** | Renovações pós-pagamento + relatórios | 📋 Planejada |
 
-**Próximo foco recomendado:** integração PIX real (Asaas) + webhooks idempotentes; job mensal de geração de faturas SaaS.
+**Próximo foco recomendado:** adapters PIX reais (Asaas + Mercado Pago/Efi), webhooks idempotentes por tenant+provider, job mensal de faturas SaaS.
 
 ---
 
@@ -95,6 +95,7 @@ Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [09-impro
 | Job mensal automático (`billing_cycle_key`) | ❌ |
 | Suspensão automática por inadimplência | ❌ |
 | Tenant: copiar PIX da fatura SaaS em Configurações | ⚠️ parcial (via listagem/detalhe) |
+| Roteamento multi-PSP por valor (plataforma) | 📋 doc — backlog (MVP tenant primeiro) |
 
 **Critério de pronto:** admin gera fatura de março; tenant paga via PIX sandbox; webhook marca paga; dashboard admin mostra receita do mês.
 
@@ -109,16 +110,24 @@ Reutiliza o **mesmo motor** com `scope = tenant`.
 | Item | Status |
 |------|--------|
 | Faturas + pagamentos por tenant (API + UI) | ✅ |
-| Config PIX tenant em `/settings` | ✅ UI (credenciais stub) |
+| Config PIX tenant em `/settings` (legado 1 PSP) | ✅ |
+| **Credenciais multi-PSP** (`tenant_payment_credentials`) | ✅ |
+| **`PaymentRouter`** — regras `minAmountCents` → provider | ✅ |
+| Migration + `Invoice.paymentProvider` | ✅ |
+| **Settings:** meios de pagamento + escolha automática por valor + simulador | ✅ |
+| `generate-pix` (stub) persiste `paymentProvider` via router | ✅ |
+| Detalhe fatura: badge do provider PIX | ✅ |
 | Cancelamento + fatura substituta (histórico preservado) | ✅ |
 | Filtros em faturas/pagamentos | ✅ |
+| Testes unitários `PaymentRouterService` | ✅ |
+| Documentação roteamento por valor | ✅ |
 
 ### Pendente
 
 | Item | Status |
 |------|--------|
-| PIX real por tenant (Asaas do revendedor) | ❌ |
-| Webhook por tenant slug | ❌ |
+| PIX real por tenant (Asaas + PSP percentual) | ❌ |
+| Webhook por tenant slug **e** provider | ❌ |
 | Faturas no detalhe do cliente | ❌ |
 | P0.3 idempotência webhook, P0.5 copiar PIX + wa.me | ❌ |
 | Job D-N automático | ❌ (Fase 4) |
@@ -164,7 +173,7 @@ flowchart TD
   E[P0/P1 paralelo: E.164, busca MAC, health DB] -.-> A
 ```
 
-1. **Integração PSP** (Asaas factory, webhooks platform + tenant)  
+1. **Integração PSP real** (Asaas + percentual, factory + webhooks platform + tenant)  
 2. **Job mensal** de faturas SaaS + tenant  
 3. Automação D-N e renovações  
 
@@ -174,7 +183,7 @@ flowchart TD
 
 | Item | Notas |
 |------|--------|
-| PIX / webhook | Stub; produção exige adapter + idempotência |
+| PIX / webhook | Stub; roteamento por valor pronto; falta adapter real + idempotência |
 | Fatura cancelada na listagem | Permanece no banco; pode “sumir” em páginas seguintes (ordenar/filtrar por status) |
 | `FormLayout` legado | Admin/tenant usam `PageLayout` |
 | Screenshots na raiz | Não versionados |
@@ -185,7 +194,8 @@ flowchart TD
 
 ## Commits recentes (referência)
 
-- *(este commit)* — Núcleo billing, filtros de listagem, cancel/recriar fatura  
+- *(este commit)* — Roteamento PSP por valor: migration, API, UI settings, PaymentRouter, docs  
+- `069f110` — Núcleo billing, filtros de listagem, cancel/recriar fatura  
 - `7118ddf` — Roadmap Fase 2.5 nos guias  
 - `6f2cc16` — Admin UI, busca e paginação em contas  
 - `d1d524e` — Máscara MAC hex  
@@ -194,6 +204,6 @@ flowchart TD
 
 ## 🚀 Próximo passo imediato
 
-1. **PaymentProvider** Asaas (platform + tenant factory).  
-2. **Webhooks** `POST /api/webhooks/pix/platform` e `/:tenantSlug` com idempotência.  
+1. **`AsaasPaymentProvider`** + adapter percentual (Mercado Pago ou Efi).  
+2. **Webhooks** `POST /api/webhooks/pix/platform` e `/:tenantSlug/:provider` com idempotência.  
 3. **Job BullMQ** geração mensal de faturas SaaS.

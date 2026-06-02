@@ -3,10 +3,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tenantBillingApi } from '../../billing/api/billing.api';
 import { PageLayout } from '../../../shared/ui/layout/PageLayout';
 import { LoadingSpinner } from '../../../shared/ui/layout/LoadingSpinner';
+import { WhatsAppProviderFields } from '../components/PaymentProviderFields';
 import {
-  PaymentProviderFields,
-  WhatsAppProviderFields,
-} from '../components/PaymentProviderFields';
+  PaymentCredentialsSection,
+  buildCredentialFormState,
+  type PaymentCredentialFormState,
+} from '../components/PaymentCredentialsSection';
+import {
+  PaymentRoutingSection,
+  buildRoutingFormState,
+  routingFormToPayload,
+  type PaymentRoutingFormRule,
+} from '../components/PaymentRoutingSection';
 import { showToast } from '../../../shared/utils/toast';
 
 function formatBrl(cents: number) {
@@ -20,38 +28,47 @@ export const TenantSettingsPage: React.FC = () => {
     queryFn: tenantBillingApi.getSettings,
   });
 
-  const [paymentProvider, setPaymentProvider] = React.useState('asaas');
-  const [paymentApiKey, setPaymentApiKey] = React.useState('');
-  const [paymentWebhookToken, setPaymentWebhookToken] = React.useState('');
+  const [credentials, setCredentials] = React.useState<PaymentCredentialFormState[]>([]);
+  const [routingRules, setRoutingRules] = React.useState<PaymentRoutingFormRule[]>([]);
   const [whatsappProvider, setWhatsappProvider] = React.useState('evolution');
   const [whatsappInstanceUrl, setWhatsappInstanceUrl] = React.useState('');
   const [whatsappApiKey, setWhatsappApiKey] = React.useState('');
 
   React.useEffect(() => {
     if (!data) return;
-    setPaymentProvider(data.payment.provider);
+    setCredentials(buildCredentialFormState(data.paymentCredentials));
+    setRoutingRules(buildRoutingFormState(data.paymentRouting));
     setWhatsappProvider(data.whatsapp.provider);
     setWhatsappInstanceUrl(data.whatsapp.instanceUrl ?? '');
   }, [data]);
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      tenantBillingApi.updateSettings({
-        paymentProvider,
-        paymentApiKey: paymentApiKey || undefined,
-        paymentWebhookToken: paymentWebhookToken || undefined,
+    mutationFn: async () => {
+      await tenantBillingApi.updatePaymentCredentials({
+        credentials: credentials.map((item) => ({
+          provider: item.provider,
+          active: item.active,
+          ...(item.apiKey ? { apiKey: item.apiKey } : {}),
+          ...(item.webhookToken ? { webhookToken: item.webhookToken } : {}),
+        })),
+      });
+
+      await tenantBillingApi.updatePaymentRouting(routingFormToPayload(routingRules));
+
+      await tenantBillingApi.updateSettings({
         whatsappProvider,
         whatsappInstanceUrl,
         whatsappApiKey: whatsappApiKey || undefined,
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
-      setPaymentApiKey('');
-      setPaymentWebhookToken('');
       setWhatsappApiKey('');
       showToast.success('Configurações salvas');
     },
-    onError: () => showToast.error('Erro ao salvar'),
+    onError: (error: Error) => {
+      showToast.error(error.message || 'Erro ao salvar');
+    },
   });
 
   if (isLoading) {
@@ -62,13 +79,7 @@ export const TenantSettingsPage: React.FC = () => {
     );
   }
 
-  const sub = data?.subscription as {
-    planName: string;
-    priceCents: number;
-    dueDay: number;
-    status: string;
-    nextDueDate: string | null;
-  } | null;
+  const sub = data?.subscription;
 
   return (
     <PageLayout
@@ -120,21 +131,24 @@ export const TenantSettingsPage: React.FC = () => {
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">PIX para seus clientes</h2>
+          <h2 className="text-base font-semibold text-slate-900">Meios de pagamento (PIX)</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Provider usado nas faturas dos clientes finais. Integração real na próxima etapa.
+            Passo 1: cadastre e ative os meios que você tem conta (API key de cada um). Só meios
+            ativos podem ser usados nas regras abaixo.
           </p>
           <div className="mt-4">
-            <PaymentProviderFields
-              paymentProvider={paymentProvider}
-              paymentApiKey={paymentApiKey}
-              paymentWebhookToken={paymentWebhookToken}
-              onPaymentProviderChange={setPaymentProvider}
-              onPaymentApiKeyChange={setPaymentApiKey}
-              onPaymentWebhookTokenChange={setPaymentWebhookToken}
-              apiKeyConfigured={data?.payment.apiKeyConfigured}
-              webhookConfigured={data?.payment.webhookTokenConfigured}
-            />
+            <PaymentCredentialsSection credentials={credentials} onChange={setCredentials} />
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Escolha automática por valor</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Passo 2: defina a partir de qual valor cada meio é usado. O sistema aplica isso ao gerar
+            o PIX de cada fatura dos seus clientes.
+          </p>
+          <div className="mt-4">
+            <PaymentRoutingSection rules={routingRules} onChange={setRoutingRules} />
           </div>
         </section>
 
