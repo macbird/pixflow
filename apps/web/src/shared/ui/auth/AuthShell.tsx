@@ -85,7 +85,7 @@ export const AuthShell: React.FC<AuthShellProps> = ({
         </p>
       </aside>
 
-      <main className="flex flex-1 flex-col justify-center px-4 py-10 sm:px-8 lg:px-12 xl:px-16 bg-slate-50">
+      <main className="flex flex-1 flex-col justify-center bg-form-field px-4 py-10 sm:px-8 lg:px-12 xl:px-16">
         <div className="mx-auto w-full max-w-md">
           <div className="mb-8 lg:hidden flex items-center gap-3">
             <div

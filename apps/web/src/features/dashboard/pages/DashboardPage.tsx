@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { dashboardApi } from '../api/dashboard.api';
 import { PageLayout } from '../../../shared/ui/layout/PageLayout';
+import { surfaceCardClass } from '../../../shared/ui/layout/surface-styles';
 import { StatCard } from '../../../shared/ui/layout/StatCard';
 import { LoadingSpinner } from '../../../shared/ui/layout/LoadingSpinner';
 import { isApiAuthError, isApiNetworkError } from '../../../shared/api/api-error';
@@ -339,7 +340,7 @@ export const DashboardPage: React.FC = () => {
             />
           </div>
         )}
-        <section className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm order-1">
+        <section className={`order-1 lg:col-span-2 ${surfaceCardClass}`}>
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <h2 className="text-base font-semibold text-slate-900">Próximos vencimentos</h2>
             <Link
@@ -388,7 +389,7 @@ export const DashboardPage: React.FC = () => {
           )}
         </section>
 
-        <section className="bg-white rounded-lg border border-slate-200 shadow-sm p-5 order-3">
+        <section className={`order-3 p-5 ${surfaceCardClass}`}>
           <h2 className="text-base font-semibold text-slate-900 mb-4">Ações rápidas</h2>
           <div className="space-y-2">
             <Link

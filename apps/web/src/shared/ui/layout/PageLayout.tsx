@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { pageCanvasClass } from './surface-styles';
 
 interface PageLayoutProps {
   title: string;
@@ -32,13 +33,13 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   );
 
   return (
-    <div className={`h-full flex flex-col ${className} bg-white`}>
+    <div className={`h-full flex flex-col ${className} ${pageCanvasClass}`}>
       {/* Mobile Portal for Top Bar */}
       {portalNode && createPortal(headerContent, portalNode)}
 
       {/* Header for Desktop */}
       {(title || actions) && (
-        <header className="hidden md:block p-6 bg-white flex-none">
+        <header className="hidden md:block flex-none p-6">
           {headerContent}
         </header>
       )}
@@ -52,7 +53,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
 
       {/* Footer */}
       {footer && (
-        <footer className="border-t bg-white flex-none p-4">
+        <footer className={`flex-none border-t border-slate-200/80 p-4 ${pageCanvasClass}`}>
           {footer}
         </footer>
       )}

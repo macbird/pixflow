@@ -55,7 +55,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   );
 
   return (
-    <div className="h-screen flex bg-white">
+    <div className="h-screen flex bg-form-field">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:flex-shrink-0">
         <div className="flex flex-col w-64">
@@ -92,7 +92,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
       )}
 
       <div className="flex flex-col w-0 flex-1 overflow-hidden">
-        <header className="md:hidden bg-white h-16 flex items-center px-4 shrink-0">
+        <header className="md:hidden flex h-16 shrink-0 items-center bg-form-field px-4">
           <button
             className="h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-gray-900 focus:outline-none"
             onClick={() => setIsMobileMenuOpen(true)}

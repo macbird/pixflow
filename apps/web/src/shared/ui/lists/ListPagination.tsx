@@ -36,7 +36,7 @@ export const ListPagination: React.FC<ListPaginationProps> = ({
           type="button"
           disabled={page <= 1}
           onClick={onPrevious}
-          className="p-2 border rounded hover:bg-slate-50 disabled:opacity-50"
+          className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm hover:bg-slate-50 disabled:opacity-50"
           aria-label="Página anterior"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -45,7 +45,7 @@ export const ListPagination: React.FC<ListPaginationProps> = ({
           type="button"
           disabled={totalPages > 0 ? page >= totalPages : false}
           onClick={onNext}
-          className="p-2 border rounded hover:bg-slate-50 disabled:opacity-50"
+          className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm hover:bg-slate-50 disabled:opacity-50"
           aria-label="Próxima página"
         >
           <ChevronRight className="w-4 h-4" />

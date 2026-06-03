@@ -10,7 +10,7 @@
 
   color-scheme: light;
   color: #1e293b; /* Slate-800 */
-  background-color: #ffffff; /* Pure White */
+  background-color: #f3f3f3;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -22,7 +22,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: #f3f3f3;
 }
 
 h1, h2, h3 {

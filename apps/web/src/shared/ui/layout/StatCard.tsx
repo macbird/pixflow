@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
+import { surfaceCardClass } from './surface-styles';
 
 interface StatCardProps {
   title: string;
@@ -22,7 +23,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   href,
 }) => {
   const content = (
-    <div className="bg-white p-3 lg:p-4 rounded-lg border border-slate-200 shadow-sm h-full w-full min-w-0 transition-shadow hover:shadow-md">
+    <div className={`${surfaceCardClass} h-full w-full min-w-0 p-3 transition-shadow hover:shadow-md lg:p-4`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs lg:text-sm font-medium text-slate-600 line-clamp-2 leading-tight">

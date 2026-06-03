@@ -1,5 +1,6 @@
 import React from 'react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { pageCanvasClass, surfaceCardClass } from './surface-styles';
 
 export interface DataGridColumn<T> {
   header: string;
@@ -52,7 +53,7 @@ export const ResponsiveDataGrid = <T extends { id: string | number }>({
   return (
     <div className="relative">
       {/* Desktop */}
-      <div className="hidden md:block bg-white rounded-md border border-slate-200 mt-4 overflow-hidden">
+      <div className={`mt-4 hidden overflow-hidden md:block ${surfaceCardClass}`}>
         <div className="overflow-x-auto">
           <table className="w-full table-fixed border-collapse">
             <colgroup>
@@ -115,7 +116,9 @@ export const ResponsiveDataGrid = <T extends { id: string | number }>({
       {/* Mobile */}
       <div className="md:hidden">
         {mobileHeaderTitles.length > 0 ? (
-          <div className="sticky top-0 z-10 flex items-center px-4 py-2 border-b border-slate-100 bg-white/90 backdrop-blur-md">
+          <div
+            className={`sticky top-0 z-10 flex items-center border-b border-slate-200/80 px-4 py-2 backdrop-blur-md ${pageCanvasClass}/95`}
+          >
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-1 min-w-0 pl-2 truncate">
               {mobileHeaderTitles[0]}
             </span>
@@ -136,16 +139,16 @@ export const ResponsiveDataGrid = <T extends { id: string | number }>({
           </div>
         ) : null}
 
-        <div className="divide-y divide-slate-50">
+        <div className="space-y-3 px-4 pb-4 pt-2">
           {data.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-slate-500">
+            <p className="py-8 text-center text-sm text-slate-500">
               Nenhum registro encontrado.
             </p>
           ) : (
             data.map((item) => (
               <div
                 key={item.id}
-                className={`px-4 py-3 transition-colors ${onRowClick ? 'cursor-pointer active:bg-slate-50' : ''}`}
+                className={`${surfaceCardClass} px-3 py-3 transition-shadow ${onRowClick ? 'cursor-pointer hover:shadow-md active:shadow' : ''}`}
                 onClick={onRowClick ? () => onRowClick(item) : undefined}
                 onKeyDown={
                   onRowClick
