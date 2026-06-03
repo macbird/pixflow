@@ -3,6 +3,7 @@ import { Modal, type ModalSize } from './Modal';
 import {
   formCancelButtonClass,
   formDangerSubmitButtonClass,
+  formRootClass,
   formSubmitButtonClass,
 } from '../forms/form-styles';
 
@@ -45,7 +46,7 @@ export const FormModal: React.FC<FormModalProps> = ({
   const submitClass = saveTone === 'danger' ? formDangerSubmitButtonClass : formSubmitButtonClass;
 
   const footer = (
-    <div className="flex gap-2">
+    <div className={`grid gap-3 ${hideCancel ? 'grid-cols-1' : 'grid-cols-2'}`}>
       {!hideCancel ? (
         <button type="button" onClick={onClose} className={formCancelButtonClass} disabled={isPending}>
           {cancelLabel}
@@ -56,7 +57,7 @@ export const FormModal: React.FC<FormModalProps> = ({
         form={formId}
         onClick={formId ? undefined : onSave}
         disabled={isPending || saveDisabled}
-        className={`${submitClass}${hideCancel ? ' w-full' : ''}`}
+        className={submitClass}
       >
         {isPending ? pendingLabel : saveLabel}
       </button>
@@ -72,7 +73,7 @@ export const FormModal: React.FC<FormModalProps> = ({
       size={size}
       footer={footer}
     >
-      {children}
+      <div className={formRootClass}>{children}</div>
     </Modal>
   );
 };

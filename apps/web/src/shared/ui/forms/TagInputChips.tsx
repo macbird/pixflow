@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { tagsApi, type TagDto } from '../../../features/tags/api/tags.api';
+import { Tags } from 'lucide-react';
+import { formInputClass, formInputPaddingWithPrefix, formLabelClass } from './form-styles';
 
 export type TagScope = 'customer' | 'server';
 
@@ -9,6 +11,7 @@ interface TagInputChipsProps {
   value: TagDto[];
   onChange: (tags: TagDto[]) => void;
   scope: TagScope;
+  label?: string;
   disabled?: boolean;
 }
 
@@ -27,6 +30,7 @@ export const TagInputChips: React.FC<TagInputChipsProps> = ({
   value,
   onChange,
   scope,
+  label,
   disabled = false,
 }) => {
   const queryClient = useQueryClient();
@@ -101,18 +105,19 @@ export const TagInputChips: React.FC<TagInputChipsProps> = ({
 
   return (
     <div className="space-y-2">
+      {label ? <span className={formLabelClass}>{label}</span> : null}
       <div className="flex flex-wrap gap-2 min-h-[2rem]">
         {value.map((tag) => (
           <span
             key={tag.id}
-            className="flex items-center gap-1 bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full text-xs font-medium"
+            className="flex items-center gap-1 rounded-full bg-form-primary/10 px-2.5 py-1 text-xs font-medium text-form-primary"
           >
             {tag.name}
             <button
               type="button"
               disabled={disabled}
               onClick={() => removeTag(tag.id)}
-              className="hover:text-indigo-900 disabled:opacity-50"
+              className="hover:text-blue-900 disabled:opacity-50"
               aria-label={`Remover tag ${tag.name}`}
             >
               <X className="w-3 h-3" />
@@ -122,6 +127,11 @@ export const TagInputChips: React.FC<TagInputChipsProps> = ({
       </div>
 
       <div className="relative">
+        <Tags
+          className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-[18px] w-[18px] -translate-y-1/2 text-slate-400"
+          strokeWidth={1.75}
+          aria-hidden
+        />
         <input
           type="text"
           value={inputValue}
@@ -134,11 +144,11 @@ export const TagInputChips: React.FC<TagInputChipsProps> = ({
           onBlur={() => setTimeout(() => setIsOpen(false), 150)}
           onKeyDown={handleKeyDown}
           placeholder={isCreating ? 'Salvando tag...' : 'Digite para buscar ou criar tag...'}
-          className="w-full p-2 border border-slate-300 rounded-md text-sm disabled:bg-slate-50"
+          className={`${formInputClass} ${formInputPaddingWithPrefix}`}
         />
 
         {isOpen && (debouncedQuery.length > 0 || showCreateOption) && (
-          <div className="absolute z-20 w-full bg-white border border-slate-200 mt-1 rounded-md shadow-lg max-h-48 overflow-auto">
+          <div className="absolute z-20 mt-2 max-h-48 w-full overflow-auto rounded-xl border border-slate-100 bg-white shadow-lg ring-1 ring-slate-900/5">
             {isFetching && (
               <p className="px-3 py-2 text-xs text-slate-500">Buscando...</p>
             )}
@@ -160,7 +170,7 @@ export const TagInputChips: React.FC<TagInputChipsProps> = ({
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => void resolveAndAdd()}
-                className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 border-t border-slate-100"
+                className="w-full border-t border-slate-100 px-3 py-2 text-left text-sm text-form-primary hover:bg-form-primary/5"
               >
                 Criar tag &quot;{inputValue.trim()}&quot;
               </button>

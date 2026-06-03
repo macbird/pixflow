@@ -7,12 +7,12 @@ import { TagInputChips } from '../../../shared/ui/forms/TagInputChips';
 import { FormPasswordInput } from '../../../shared/ui/forms/FormPasswordInput';
 import type { TagDto } from '../../tags/api/tags.api';
 import { showToast } from '../../../shared/utils/toast';
-import {
-  formInputClass,
-  formLabelClass,
-  formSelectClass,
-  formTextareaClass,
-} from '../../../shared/ui/forms/form-styles';
+import { Globe, Server, ToggleLeft, User } from 'lucide-react';
+import { FormField } from '../../../shared/ui/forms/FormField';
+import { FormInput } from '../../../shared/ui/forms/FormInput';
+import { FormNumberStepper } from '../../../shared/ui/forms/FormNumberStepper';
+import { FormSelect } from '../../../shared/ui/forms/FormSelect';
+import { formRootClass, formSectionClass, formTextareaClass } from '../../../shared/ui/forms/form-styles';
 
 const serverFormSchema = serverSchema.extend({
   tags: z.array(z.custom<TagDto>()).default([]),
@@ -117,52 +117,42 @@ export const ServerForm = React.forwardRef<HTMLFormElement, ServerFormProps>(
         id={formId}
         noValidate
         onSubmit={handleSubmit(onSubmitWrapper, onInvalid)}
-        className="space-y-4"
+        className={`${formSectionClass} ${formRootClass}`}
       >
-        <div>
-          <label className="block">
-            <span className={formLabelClass}>Nome</span>
-            <input {...register('name')} className={formInputClass} />
-          </label>
-          {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
-        </div>
+        <FormInput
+          label="Nome"
+          prefixIcon={Server}
+          error={errors.name?.message}
+          placeholder="Nome do servidor"
+          {...register('name')}
+        />
 
-        <div>
-          <label className="block">
-            <span className={formLabelClass}>URL do Painel</span>
-            <input
-              type="url"
-              {...register('panelUrl')}
-              placeholder="https://exemplo.com"
-              className={formInputClass}
-            />
-          </label>
-          {errors.panelUrl && (
-            <p className="text-red-500 text-xs mt-1">{errors.panelUrl.message}</p>
-          )}
-        </div>
+        <FormInput
+          label="URL do painel"
+          type="url"
+          prefixIcon={Globe}
+          error={errors.panelUrl?.message}
+          placeholder="https://exemplo.com"
+          {...register('panelUrl')}
+        />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Controller
             name="panelUsername"
             control={control}
             render={({ field }) => (
-              <label className="block">
-                <span className={formLabelClass}>Usuário do painel</span>
-                <input
-                  ref={field.ref}
-                  name={field.name}
-                  value={field.value ?? ''}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  autoComplete="off"
-                  className={formInputClass}
-                  onFocus={(e) => e.target.select()}
-                />
-                {errors.panelUsername && (
-                  <p className="text-red-500 text-xs mt-1">{errors.panelUsername.message}</p>
-                )}
-              </label>
+              <FormInput
+                label="Usuário do painel"
+                prefixIcon={User}
+                error={errors.panelUsername?.message}
+                ref={field.ref}
+                name={field.name}
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                autoComplete="off"
+                onFocus={(e) => e.target.select()}
+              />
             )}
           />
 
@@ -184,66 +174,48 @@ export const ServerForm = React.forwardRef<HTMLFormElement, ServerFormProps>(
           />
         </div>
 
-        <div>
-          <label className="block">
-            <span className={formLabelClass}>Notas/Credenciais</span>
-            <textarea {...register('panelNotes')} rows={3} className={formTextareaClass} />
-          </label>
-        </div>
+        <FormField label="Notas do painel">
+          <textarea {...register('panelNotes')} rows={3} className={formTextareaClass} />
+        </FormField>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Conexões Máx.</span>
-              <input
-                type="number"
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Controller
+            name="maxConnections"
+            control={control}
+            render={({ field }) => (
+              <FormNumberStepper
+                label="Conexões máx."
                 min={1}
-                {...register('maxConnections', {
-                  setValueAs: (value) => {
-                    if (value === '' || value == null) return undefined;
-                    const parsed = Number(value);
-                    return Number.isFinite(parsed) ? parsed : undefined;
-                  },
-                })}
-                className={formInputClass}
-                onFocus={(e) => e.target.select()}
+                error={errors.maxConnections?.message}
+                name={field.name}
+                value={field.value ?? 1}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                ref={field.ref}
               />
-            </label>
-            {errors.maxConnections && (
-              <p className="text-red-500 text-xs mt-1">{errors.maxConnections.message}</p>
             )}
-          </div>
-
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Status</span>
-              <select {...register('status')} className={formSelectClass}>
-                <option value="active">Ativo</option>
-                <option value="maintenance">Manutenção</option>
-                <option value="full">Lotado</option>
-              </select>
-            </label>
-            {errors.status && (
-              <p className="text-red-500 text-xs mt-1">{errors.status.message}</p>
-            )}
-          </div>
+          />
+          <FormSelect label="Status" prefixIcon={ToggleLeft} error={errors.status?.message} {...register('status')}>
+            <option value="active">Ativo</option>
+            <option value="maintenance">Manutenção</option>
+            <option value="full">Lotado</option>
+            <option value="inactive">Desativado</option>
+          </FormSelect>
         </div>
 
-        <div className="border-t border-slate-200 pt-4">
-          <label className="block">
-            <span className={`${formLabelClass} mb-2 block`}>Tags</span>
-            <Controller
-              name="tags"
-              control={control}
-              render={({ field }) => (
-                <TagInputChips
-                  scope="server"
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </label>
+        <div className="border-t border-slate-100 pt-4">
+          <Controller
+            name="tags"
+            control={control}
+            render={({ field }) => (
+              <TagInputChips
+                scope="server"
+                label="Tags"
+                value={field.value ?? []}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </div>
       </form>
     );

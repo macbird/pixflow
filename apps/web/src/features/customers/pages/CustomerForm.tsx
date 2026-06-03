@@ -12,15 +12,36 @@ import {
 } from '@client-manager/shared';
 import { plansApi } from '../../plans/api/plans.api';
 import { serversApi } from '../../servers/api/servers.api';
-import { Trash2, Plus } from 'lucide-react';
+import {
+  Activity,
+  AppWindow,
+  Calendar,
+  CreditCard,
+  Link2,
+  Mail,
+  Network,
+  Phone,
+  Plus,
+  Server,
+  Tag,
+  Trash2,
+  User,
+} from 'lucide-react';
 import { TagInputChips } from '../../../shared/ui/forms/TagInputChips';
 import { MacAddressInput } from '../../../shared/ui/forms/MacAddressInput';
+import { FormField } from '../../../shared/ui/forms/FormField';
+import { FormInput } from '../../../shared/ui/forms/FormInput';
+import { FormSelect } from '../../../shared/ui/forms/FormSelect';
+import { InlineFormSelect } from '../../../shared/ui/forms/InlineFormSelect';
 import type { TagDto } from '../../tags/api/tags.api';
 import { showToast } from '../../../shared/utils/toast';
 import {
   formInputClass,
-  formLabelClass,
-  formSelectClass,
+  formInputPaddingWithPrefix,
+  formErrorClass,
+  formGridClass,
+  formRootClass,
+  formSectionClass,
   formTextareaClass,
 } from '../../../shared/ui/forms/form-styles';
 
@@ -197,84 +218,69 @@ export const CustomerForm = React.forwardRef<HTMLFormElement, CustomerFormProps>
         id={formId}
         noValidate
         onSubmit={handleSubmit(onSubmitWrapper, onInvalid)}
-        className="space-y-4"
+        className={`${formSectionClass} ${formRootClass}`}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Nome</span>
-              <input {...register('name')} className={formInputClass} />
-            </label>
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
-          </div>
-
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>E-mail</span>
-              <input type="email" {...register('email')} className={formInputClass} />
-            </label>
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-          </div>
+        <div className={formGridClass}>
+          <FormInput
+            label="Nome"
+            prefixIcon={User}
+            error={errors.name?.message}
+            placeholder="Nome do cliente"
+            {...register('name')}
+          />
+          <FormInput
+            label="E-mail"
+            type="email"
+            prefixIcon={Mail}
+            error={errors.email?.message}
+            placeholder="email@exemplo.com"
+            {...register('email')}
+          />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Telefone</span>
-              <Controller
-                name="phone"
-                control={control}
-                render={({ field }) => (
-                  <PatternFormat
-                    format="(##) #####-####"
-                    mask="_"
-                    value={field.value ?? ''}
-                    onValueChange={(values) => field.onChange(values.formattedValue)}
-                    onBlur={field.onBlur}
-                    className={formInputClass}
-                  />
-                )}
-              />
-            </label>
-            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
-          </div>
+        <div className={formGridClass}>
+          <FormField label="Telefone" prefixIcon={Phone} error={errors.phone?.message}>
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field }) => (
+                <PatternFormat
+                  format="(##) #####-####"
+                  mask="_"
+                  value={field.value ?? ''}
+                  onValueChange={(values) => field.onChange(values.formattedValue)}
+                  onBlur={field.onBlur}
+                  className={`${formInputClass} ${formInputPaddingWithPrefix}`}
+                />
+              )}
+            />
+          </FormField>
 
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Plano</span>
-              <select {...register('planId')} className={formSelectClass}>
-                <option value="">Selecione um plano</option>
-                {plans?.data?.map((plan: { id: string; name: string }) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {errors.planId && <p className="text-red-500 text-xs mt-1">{errors.planId.message}</p>}
-          </div>
+          <FormSelect label="Plano" prefixIcon={CreditCard} error={errors.planId?.message} {...register('planId')}>
+            <option value="">Selecione um plano</option>
+            {plans?.data?.map((plan: { id: string; name: string }) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.name}
+              </option>
+            ))}
+          </FormSelect>
 
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Status</span>
-              <select {...register('status')} className={formSelectClass}>
-                {CUSTOMER_STATUS_VALUES.map((value) => (
-                  <option key={value} value={value}>
-                    {CUSTOMER_STATUS_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <FormSelect label="Status" prefixIcon={Activity} {...register('status')}>
+            {CUSTOMER_STATUS_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {CUSTOMER_STATUS_LABELS[value]}
+              </option>
+            ))}
+          </FormSelect>
         </div>
 
-        <div className="border-t border-slate-200 pt-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-medium text-slate-900">Conexões</h3>
+        <div className="border-t border-slate-100 pt-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-900">Conexões</h3>
             <button
               type="button"
               onClick={() => append(emptyConnection)}
-              className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+              className="flex items-center text-sm font-semibold text-form-primary hover:opacity-80"
             >
               <Plus className="w-4 h-4 mr-1" /> Adicionar
             </button>
@@ -283,7 +289,7 @@ export const CustomerForm = React.forwardRef<HTMLFormElement, CustomerFormProps>
             <p className="text-red-500 text-xs mb-2">{errors.connections.message}</p>
           )}
           {fields.length === 0 ? (
-            <p className="text-sm text-slate-500 rounded-lg border border-dashed border-slate-200 p-4 text-center">
+            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">
               Nenhuma conexão adicionada. Clique em &quot;Adicionar&quot; para incluir ao menos uma.
             </p>
           ) : (
@@ -291,38 +297,40 @@ export const CustomerForm = React.forwardRef<HTMLFormElement, CustomerFormProps>
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid grid-cols-1 md:grid-cols-[1fr_1.25fr_1fr_1fr_auto] gap-2 items-start bg-slate-50 p-2 rounded"
+                  className="grid grid-cols-1 items-start gap-3 rounded-[10px] bg-form-field p-3 md:grid-cols-[1fr_1.25fr_1fr_1fr_auto]"
                 >
-                  <div>
-                    <select
-                      {...register(`connections.${index}.serverId`)}
-                      className={`${formInputClass} text-sm`}
-                    >
-                      <option value="">Servidor</option>
-                      {servers?.data?.map((server: { id: string; name: string }) => (
-                        <option key={server.id} value={server.id}>
-                          {server.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.connections?.[index]?.serverId && (
-                      <span className="text-red-500 text-[10px]">
-                        {errors.connections[index]?.serverId?.message as string}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2 w-full">
-                    <input
-                      {...register(`connections.${index}.label`)}
-                      placeholder="Rótulo (ex: Backup)"
-                      className={`${formInputClass} text-sm`}
-                    />
-                    <input
-                      type="url"
-                      {...register(`connections.${index}.m3u8Link`)}
-                      placeholder="M3U8 Link"
-                      className={`${formInputClass} text-sm`}
-                    />
+                  <InlineFormSelect
+                    prefixIcon={Server}
+                    error={errors.connections?.[index]?.serverId?.message as string | undefined}
+                    {...register(`connections.${index}.serverId`)}
+                  >
+                    <option value="">Servidor</option>
+                    {servers?.data?.map((server: { id: string; name: string }) => (
+                      <option key={server.id} value={server.id}>
+                        {server.name}
+                      </option>
+                    ))}
+                  </InlineFormSelect>
+                  <div className="relative w-full">
+                    <div className="flex flex-col gap-2">
+                      <div className="relative">
+                        <Tag className="pointer-events-none absolute left-3 top-1/2 z-10 h-[16px] w-[16px] -translate-y-1/2 text-slate-400" strokeWidth={1.75} />
+                        <input
+                          {...register(`connections.${index}.label`)}
+                          placeholder="Rótulo (ex: Backup)"
+                          className={`${formInputClass} pl-10 text-sm`}
+                        />
+                      </div>
+                      <div className="relative">
+                        <Link2 className="pointer-events-none absolute left-3 top-1/2 z-10 h-[16px] w-[16px] -translate-y-1/2 text-slate-400" strokeWidth={1.75} />
+                        <input
+                          type="url"
+                          {...register(`connections.${index}.m3u8Link`)}
+                          placeholder="M3U8 Link"
+                          className={`${formInputClass} pl-10 text-sm`}
+                        />
+                      </div>
+                    </div>
                     {errors.connections?.[index]?.m3u8Link && (
                       <span className="text-red-500 text-[10px]">
                         {errors.connections[index]?.m3u8Link?.message as string}
@@ -333,7 +341,8 @@ export const CustomerForm = React.forwardRef<HTMLFormElement, CustomerFormProps>
                     name={`connections.${index}.macAddress`}
                     control={control}
                     render={({ field: macField }) => (
-                      <div className="w-full">
+                      <div className="relative w-full">
+                        <Network className="pointer-events-none absolute left-3 top-1/2 z-10 h-[16px] w-[16px] -translate-y-1/2 text-slate-400" strokeWidth={1.75} />
                         <MacAddressInput
                           ref={macField.ref}
                           name={macField.name}
@@ -341,7 +350,7 @@ export const CustomerForm = React.forwardRef<HTMLFormElement, CustomerFormProps>
                           onBlur={macField.onBlur}
                           onChange={macField.onChange}
                           placeholder="00:00:00:00:00:00"
-                          className={`${formInputClass} font-mono uppercase tracking-wide`}
+                          className={`${formInputClass} pl-10 font-mono text-sm uppercase tracking-wide`}
                         />
                         {errors.connections?.[index]?.macAddress && (
                           <span className="text-red-500 text-[10px]">
@@ -351,11 +360,12 @@ export const CustomerForm = React.forwardRef<HTMLFormElement, CustomerFormProps>
                       </div>
                     )}
                   />
-                  <div className="w-full">
+                  <div className="relative w-full">
+                    <AppWindow className="pointer-events-none absolute left-3 top-1/2 z-10 h-[16px] w-[16px] -translate-y-1/2 text-slate-400" strokeWidth={1.75} />
                     <input
                       {...register(`connections.${index}.applicationName`)}
                       placeholder="Aplicativo"
-                      className={`${formInputClass} text-sm`}
+                      className={`${formInputClass} pl-10 text-sm`}
                     />
                     {errors.connections?.[index]?.applicationName && (
                       <span className="text-red-500 text-[10px]">
@@ -377,35 +387,25 @@ export const CustomerForm = React.forwardRef<HTMLFormElement, CustomerFormProps>
           )}
         </div>
 
-        <div>
-          <label className="block">
-            <span className={formLabelClass}>Data de Vencimento</span>
-            <input type="date" {...register('expiresAt')} className={formInputClass} />
-          </label>
-        </div>
+        <FormInput label="Data de vencimento" type="date" prefixIcon={Calendar} {...register('expiresAt')} />
 
-        <div>
-          <label className="block">
-            <span className={formLabelClass}>Observações</span>
-            <textarea {...register('notes')} rows={3} className={formTextareaClass} />
-          </label>
-        </div>
+        <FormField label="Observações">
+          <textarea {...register('notes')} rows={3} className={formTextareaClass} />
+        </FormField>
 
-        <div className="border-t border-slate-200 pt-4">
-          <label className="block">
-            <span className={formLabelClass}>Tags</span>
-            <Controller
-              name="tags"
-              control={control}
-              render={({ field }) => (
-                <TagInputChips
-                  scope="customer"
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </label>
+        <div className="border-t border-slate-100 pt-4">
+          <Controller
+            name="tags"
+            control={control}
+            render={({ field }) => (
+              <TagInputChips
+                scope="customer"
+                label="Tags"
+                value={field.value ?? []}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </div>
       </form>
     );

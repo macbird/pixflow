@@ -1,14 +1,13 @@
 import React from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { Calendar, CreditCard, FileText } from 'lucide-react';
 import { FormModal } from '../../../shared/ui/modals/FormModal';
+import { FormField } from '../../../shared/ui/forms/FormField';
+import { FormInput } from '../../../shared/ui/forms/FormInput';
+import { FormSelect } from '../../../shared/ui/forms/FormSelect';
+import { formTextareaClass } from '../../../shared/ui/forms/form-styles';
 import { tenantBillingApi } from '../api/billing.api';
 import { formatCents } from '../../../shared/ui/billing/format-billing';
-import {
-  formInputClass,
-  formLabelClass,
-  formSelectClass,
-  formTextareaClass,
-} from '../../../shared/ui/forms/form-styles';
 import {
   MANUAL_PAYMENT_METHOD_LABELS,
   MANUAL_PAYMENT_METHOD_VALUES,
@@ -98,17 +97,19 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
         </p>
       ) : (
         <div className="space-y-4">
-          <label className="block">
-            <span className={formLabelClass}>Fatura</span>
-            <select value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} className={formSelectClass}>
-              {openInvoices.data.map((invoice) => (
-                <option key={invoice.id} value={invoice.id}>
-                  {invoice.customer?.name ?? 'Cliente'} · {invoice.billingCycleKey} ·{' '}
-                  {formatCents(invoice.amountCents)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FormSelect
+            label="Fatura"
+            prefixIcon={FileText}
+            value={invoiceId}
+            onChange={(e) => setInvoiceId(e.target.value)}
+          >
+            {openInvoices.data.map((invoice) => (
+              <option key={invoice.id} value={invoice.id}>
+                {invoice.customer?.name ?? 'Cliente'} · {invoice.billingCycleKey} ·{' '}
+                {formatCents(invoice.amountCents)}
+              </option>
+            ))}
+          </FormSelect>
 
           {selectedInvoice ? (
             <p className="text-xs text-slate-500">
@@ -116,28 +117,28 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
             </p>
           ) : null}
 
-          <label className="block">
-            <span className={formLabelClass}>Método</span>
-            <select
-              value={method}
-              onChange={(e) => setMethod(e.target.value as ManualPaymentMethodValue)}
-              className={formSelectClass}
-            >
-              {MANUAL_PAYMENT_METHOD_VALUES.map((value) => (
-                <option key={value} value={value}>
-                  {MANUAL_PAYMENT_METHOD_LABELS[value]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FormSelect
+            label="Método"
+            prefixIcon={CreditCard}
+            value={method}
+            onChange={(e) => setMethod(e.target.value as ManualPaymentMethodValue)}
+          >
+            {MANUAL_PAYMENT_METHOD_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {MANUAL_PAYMENT_METHOD_LABELS[value]}
+              </option>
+            ))}
+          </FormSelect>
 
-          <label className="block">
-            <span className={formLabelClass}>Data do pagamento</span>
-            <input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} className={formInputClass} />
-          </label>
+          <FormInput
+            label="Data do pagamento"
+            prefixIcon={Calendar}
+            type="date"
+            value={paidAt}
+            onChange={(e) => setPaidAt(e.target.value)}
+          />
 
-          <label className="block">
-            <span className={formLabelClass}>Observações (opcional)</span>
+          <FormField label="Observações (opcional)">
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -145,7 +146,7 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
               maxLength={500}
               className={formTextareaClass}
             />
-          </label>
+          </FormField>
         </div>
       )}
     </FormModal>

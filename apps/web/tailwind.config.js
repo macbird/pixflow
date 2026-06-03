@@ -8,8 +8,17 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Poppins', 'Inter', ...require('tailwindcss/defaultTheme').fontFamily.sans],
+        form: ['Poppins', 'Inter', ...require('tailwindcss/defaultTheme').fontFamily.sans],
+      },
       colors: {
         slate: colors.slate,
+        form: {
+          field: '#F3F3F3',
+          primary: '#2B80EA',
+          'primary-hover': '#2470D2',
+        },
       },
       borderRadius: {
         'lg': '0.75rem', // 12px

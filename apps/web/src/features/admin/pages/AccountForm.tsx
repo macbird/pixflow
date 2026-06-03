@@ -1,12 +1,10 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { PasswordInput } from '../../../shared/ui/forms/PasswordInput';
+import { Building2, Calendar, Link2, Mail, ToggleLeft, User } from 'lucide-react';
+import { FormInput } from '../../../shared/ui/forms/FormInput';
+import { FormPasswordInput } from '../../../shared/ui/forms/FormPasswordInput';
+import { FormSelect } from '../../../shared/ui/forms/FormSelect';
 import { showToast } from '../../../shared/utils/toast';
-import {
-  formInputClass,
-  formLabelClass,
-  formSelectClass,
-} from '../../../shared/ui/forms/form-styles';
 
 export interface AccountCreateInput {
   name: string;
@@ -113,23 +111,18 @@ export const AccountForm: React.FC<AccountFormProps> = ({
   }, onInvalid);
 
   const dueDateField = (
-    <div>
-      <label className="block">
-        <span className={formLabelClass}>Próximo vencimento SaaS</span>
-        <input
-          type="date"
-          {...register('dueDate', { required: 'Informe a data de vencimento' })}
-          className={formInputClass}
-        />
-      </label>
-      {errors.dueDate ? (
-        <p className="mt-1 text-xs text-red-500">{String(errors.dueDate.message)}</p>
-      ) : (
-        <p className="mt-1 text-xs text-slate-500">
-          Usada para gerar a fatura SaaS da plataforma nesta data.
-        </p>
-      )}
-    </div>
+    <FormInput
+      label="Próximo vencimento SaaS"
+      type="date"
+      prefixIcon={Calendar}
+      error={errors.dueDate?.message ? String(errors.dueDate.message) : undefined}
+      hint={
+        errors.dueDate
+          ? undefined
+          : 'Usada para gerar a fatura SaaS da plataforma nesta data.'
+      }
+      {...register('dueDate', { required: 'Informe a data de vencimento' })}
+    />
   );
 
   if (mode === 'edit') {
@@ -152,37 +145,32 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="block">
-            <span className={formLabelClass}>Nome da conta</span>
-            <input
-              {...register('name')}
-              disabled
-              className={`${formInputClass} cursor-not-allowed bg-slate-100 text-slate-600`}
-            />
-          </label>
-          <label className="block">
-            <span className={formLabelClass}>Slug</span>
-            <input
-              {...register('slug')}
-              disabled
-              className={`${formInputClass} cursor-not-allowed bg-slate-100 font-mono text-slate-600`}
-            />
-          </label>
+          <FormInput
+            label="Nome da conta"
+            prefixIcon={Building2}
+            disabled
+            className="cursor-not-allowed opacity-80"
+            {...register('name')}
+          />
+          <FormInput
+            label="Slug"
+            prefixIcon={Link2}
+            disabled
+            className="cursor-not-allowed font-mono opacity-80"
+            {...register('slug')}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Status da conta</span>
-              <select {...register('status', { required: true })} className={formSelectClass}>
-                <option value="active">Ativa</option>
-                <option value="inactive">Desativada</option>
-              </select>
-            </label>
-            <p className="mt-1 text-xs text-slate-500">
-              Contas suspensas não conseguem fazer login no app do revendedor.
-            </p>
-          </div>
+          <FormSelect
+            label="Status da conta"
+            prefixIcon={ToggleLeft}
+            hint="Contas suspensas não conseguem fazer login no app do revendedor."
+            {...register('status', { required: true })}
+          >
+            <option value="active">Ativa</option>
+            <option value="inactive">Desativada</option>
+          </FormSelect>
           {dueDateField}
         </div>
 
@@ -213,29 +201,19 @@ export const AccountForm: React.FC<AccountFormProps> = ({
   return (
     <form id={formId} noValidate onSubmit={onSubmitHandler} className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className="block">
-            <span className={formLabelClass}>Nome da empresa/revenda</span>
-            <input
-              {...register('name', { required: 'Nome da conta é obrigatório' })}
-              className={formInputClass}
-              placeholder="Ex: Revenda Master"
-            />
-          </label>
-          {errors.name ? (
-            <p className="mt-1 text-xs text-red-500">{String(errors.name.message)}</p>
-          ) : null}
-        </div>
-        <div>
-          <label className="block">
-            <span className={formLabelClass}>Slug (URL)</span>
-            <input
-              {...register('slug')}
-              className={formInputClass}
-              placeholder="ex: revenda-master"
-            />
-          </label>
-        </div>
+        <FormInput
+          label="Nome da empresa/revenda"
+          prefixIcon={Building2}
+          error={errors.name?.message ? String(errors.name.message) : undefined}
+          placeholder="Ex: Revenda Master"
+          {...register('name', { required: 'Nome da conta é obrigatório' })}
+        />
+        <FormInput
+          label="Slug (URL)"
+          prefixIcon={Link2}
+          placeholder="ex: revenda-master"
+          {...register('slug')}
+        />
       </div>
 
       <div className="border-t border-slate-200 pt-4">
@@ -246,58 +224,43 @@ export const AccountForm: React.FC<AccountFormProps> = ({
       <div className="border-t border-slate-200 pt-4">
         <h3 className="mb-4 text-sm font-medium text-slate-900">Dados do proprietário</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Nome do usuário</span>
-              <input
-                {...register('ownerName', { required: 'Nome do proprietário é obrigatório' })}
-                className={formInputClass}
-                placeholder="Ex: João Silva"
-              />
-            </label>
-            {errors.ownerName ? (
-              <p className="mt-1 text-xs text-red-500">{String(errors.ownerName.message)}</p>
-            ) : null}
-          </div>
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>E-mail de acesso</span>
-              <input
-                type="email"
-                {...register('ownerEmail', {
-                  required: 'E-mail de acesso é obrigatório',
-                  pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: 'Informe um e-mail válido',
-                  },
-                })}
-                className={formInputClass}
-                placeholder="joao@email.com"
-              />
-            </label>
-            {errors.ownerEmail ? (
-              <p className="mt-1 text-xs text-red-500">{String(errors.ownerEmail.message)}</p>
-            ) : null}
-          </div>
+          <FormInput
+            label="Nome do usuário"
+            prefixIcon={User}
+            error={errors.ownerName?.message ? String(errors.ownerName.message) : undefined}
+            placeholder="Ex: João Silva"
+            {...register('ownerName', { required: 'Nome do proprietário é obrigatório' })}
+          />
+          <FormInput
+            label="E-mail de acesso"
+            type="email"
+            prefixIcon={Mail}
+            error={errors.ownerEmail?.message ? String(errors.ownerEmail.message) : undefined}
+            placeholder="joao@email.com"
+            {...register('ownerEmail', {
+              required: 'E-mail de acesso é obrigatório',
+              pattern: {
+                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                message: 'Informe um e-mail válido',
+              },
+            })}
+          />
         </div>
 
         <div className="mt-4 max-w-md">
-          <PasswordInput
-            id="initialPassword"
+          <FormPasswordInput
             label="Senha inicial (opcional)"
             autoComplete="new-password"
             placeholder="Mudar123! (padrão se vazio)"
-            registration={register('initialPassword', {
+            hint="O usuário será obrigado a trocar esta senha no primeiro login."
+            error={errors.initialPassword?.message as string | undefined}
+            {...register('initialPassword', {
               validate: (value) =>
                 !value ||
                 String(value).length >= 6 ||
                 'Senha deve ter no mínimo 6 caracteres',
             })}
-            error={errors.initialPassword?.message as string | undefined}
           />
-          <p className="mt-1 text-xs text-slate-500">
-            O usuário será obrigado a trocar esta senha no primeiro login.
-          </p>
         </div>
       </div>
     </form>

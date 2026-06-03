@@ -4,7 +4,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { planSchema, type PlanInput } from '@client-manager/shared';
 import { showToast } from '../../../shared/utils/toast';
 import { CurrencyInput } from '../../../shared/ui/forms/CurrencyInput';
-import { formInputClass, formLabelClass, formSelectClass, formTextareaClass } from '../../../shared/ui/forms/form-styles';
+import { Banknote, CalendarClock, Package, ToggleLeft } from 'lucide-react';
+import { FormField } from '../../../shared/ui/forms/FormField';
+import { FormInput } from '../../../shared/ui/forms/FormInput';
+import { FormNumberStepper } from '../../../shared/ui/forms/FormNumberStepper';
+import { FormSelect } from '../../../shared/ui/forms/FormSelect';
+import {
+  formInputClass,
+  formInputPaddingWithPrefix,
+  formRootClass,
+  formSectionClass,
+  formTextareaClass,
+} from '../../../shared/ui/forms/form-styles';
 
 interface PlanFormProps {
   formId: string;
@@ -75,85 +86,69 @@ export const PlanForm = React.forwardRef<HTMLFormElement, PlanFormProps>(
         id={formId}
         noValidate
         onSubmit={handleSubmit(onSubmitWrapper, onInvalid)}
-        className="space-y-4"
+        className={`${formSectionClass} ${formRootClass}`}
       >
-        <div>
-          <label className="block">
-            <span className={formLabelClass}>Nome</span>
-            <input {...register('name')} className={formInputClass} />
-          </label>
-          {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
-        </div>
+        <FormInput
+          label="Nome"
+          prefixIcon={Package}
+          error={errors.name?.message}
+          placeholder="Nome do plano"
+          {...register('name')}
+        />
 
-        <div>
-          <label className="block">
-            <span className={formLabelClass}>Descrição</span>
-            <textarea {...register('description')} className={formTextareaClass} />
-          </label>
-        </div>
+        <FormField label="Descrição">
+          <textarea {...register('description')} className={formTextareaClass} rows={3} />
+        </FormField>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Preço</span>
-              <Controller
-                name="price"
-                control={control}
-                render={({ field }) => (
-                  <CurrencyInput
-                    ref={field.ref}
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    className={formInputClass}
-                    placeholder="R$ 0,00"
-                  />
-                )}
+          <FormField label="Preço" prefixIcon={Banknote} error={errors.price?.message}>
+            <Controller
+              name="price"
+              control={control}
+              render={({ field }) => (
+                <CurrencyInput
+                  ref={field.ref}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  className={`${formInputClass} ${formInputPaddingWithPrefix}`}
+                  placeholder="R$ 0,00"
+                />
+              )}
+            />
+          </FormField>
+
+          <FormSelect
+            label="Ciclo"
+            prefixIcon={CalendarClock}
+            error={errors.billingCycle?.message}
+            {...register('billingCycle')}
+          >
+            <option value="monthly">Mensal</option>
+            <option value="quarterly">Trimestral</option>
+            <option value="yearly">Anual</option>
+          </FormSelect>
+
+          <Controller
+            name="maxConnections"
+            control={control}
+            render={({ field }) => (
+              <FormNumberStepper
+                label="Conexões"
+                min={1}
+                error={errors.maxConnections?.message}
+                name={field.name}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                ref={field.ref}
               />
-            </label>
-            {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>}
-          </div>
-
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Ciclo</span>
-              <select {...register('billingCycle')} className={formSelectClass}>
-                <option value="monthly">Mensal</option>
-                <option value="quarterly">Trimestral</option>
-                <option value="yearly">Anual</option>
-              </select>
-            </label>
-            {errors.billingCycle && (
-              <p className="text-red-500 text-xs mt-1">{errors.billingCycle.message}</p>
             )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Conexões</span>
-              <input
-                type="number"
-                {...register('maxConnections', { valueAsNumber: true })}
-                className={formInputClass}
-                onFocus={(e) => e.target.select()}
-              />
-            </label>
-            {errors.maxConnections && (
-              <p className="text-red-500 text-xs mt-1">{errors.maxConnections.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block">
-              <span className={formLabelClass}>Status</span>
-              <select {...register('status')} className={formSelectClass}>
-                <option value="active">Ativo</option>
-                <option value="inactive">Desativado</option>
-              </select>
-            </label>
-          </div>
+          />
+          <FormSelect label="Status" prefixIcon={ToggleLeft} {...register('status')}>
+            <option value="active">Ativo</option>
+            <option value="inactive">Desativado</option>
+          </FormSelect>
         </div>
       </form>
     );

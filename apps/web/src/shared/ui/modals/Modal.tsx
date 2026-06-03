@@ -172,11 +172,11 @@ export const Modal: React.FC<ModalProps> = ({
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-4">
+            <div className="flex-1 overflow-y-auto px-4 py-5">
               {description && <p className="mb-4 text-sm text-slate-600">{description}</p>}
               {children}
             </div>
-            {footer ? <div className="shrink-0 border-t border-slate-100 px-4 py-4">{footer}</div> : null}
+            {footer ? <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-4 py-4">{footer}</div> : null}
           </div>
 
           {/* Desktop: content dialog */}
@@ -195,11 +195,11 @@ export const Modal: React.FC<ModalProps> = ({
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="flex-1 overflow-y-auto px-6 py-5">
                 {description && <p className="mb-4 text-sm text-slate-600">{description}</p>}
                 {children}
               </div>
-              {footer ? <div className="shrink-0 border-t border-slate-100 px-5 py-4">{footer}</div> : null}
+              {footer ? <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-6 py-5">{footer}</div> : null}
             </div>
           </div>
         </>

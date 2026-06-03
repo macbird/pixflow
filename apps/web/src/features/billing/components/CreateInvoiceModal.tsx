@@ -1,14 +1,13 @@
 import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Calendar, CalendarRange, CreditCard, DollarSign, User } from 'lucide-react';
 import { customersApi } from '../../customers/api/customers.api';
 import { tenantBillingApi } from '../api/billing.api';
 import { FormModal } from '../../../shared/ui/modals/FormModal';
-import {
-  formInputClass,
-  formLabelClass,
-  formSelectClass,
-  formTextareaClass,
-} from '../../../shared/ui/forms/form-styles';
+import { FormField } from '../../../shared/ui/forms/FormField';
+import { FormInput } from '../../../shared/ui/forms/FormInput';
+import { FormSelect } from '../../../shared/ui/forms/FormSelect';
+import { formTextareaClass } from '../../../shared/ui/forms/form-styles';
 import {
   MANUAL_PAYMENT_METHOD_LABELS,
   MANUAL_PAYMENT_METHOD_VALUES,
@@ -58,25 +57,26 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, 
   }, [customersPage, customerId]);
 
   const createMutation = useMutation({
-    mutationFn: (payload: CreateManualInvoiceInput) => tenantBillingApi.createInvoice(payload),
+    mutationFn: (payload: CreateManualInvoiceInput) => tenantBillingApi.createManualInvoice(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       queryClient.invalidateQueries({ queryKey: ['activations'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      showToast.success(registerPayment ? 'Fatura criada e pagamento registrado' : 'Fatura criada');
+      showToast.success('Fatura criada');
       onClose();
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      showToast.error(err.response?.data?.message ?? 'Não foi possível criar a fatura');
-    },
+    onError: (err: Error) => showToast.error(err.message || 'Erro ao criar fatura'),
   });
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const parsed = Number.parseFloat(amountReais.replace(',', '.'));
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!customerId) {
       showToast.error('Selecione um cliente');
+      return;
+    }
+    const parsed = Number(amountReais.replace(',', '.'));
+    if (!amountReais.trim()) {
+      showToast.error('Informe o valor');
       return;
     }
     if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -110,86 +110,80 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, 
       onSave={() => formRef.current?.requestSubmit()}
     >
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-        <label className="block">
-          <span className={formLabelClass}>Cliente</span>
-          <select
-            value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
-            disabled={loadingCustomers}
-            className={formSelectClass}
-          >
-            {customersPage?.data.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FormSelect
+          label="Cliente"
+          prefixIcon={User}
+          value={customerId}
+          onChange={(e) => setCustomerId(e.target.value)}
+          disabled={loadingCustomers}
+        >
+          {customersPage?.data.map((customer) => (
+            <option key={customer.id} value={customer.id}>
+              {customer.name}
+            </option>
+          ))}
+        </FormSelect>
 
-        <label className="block">
-          <span className={formLabelClass}>Valor (R$)</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={amountReais}
-            onChange={(e) => setAmountReais(e.target.value)}
-            className={formInputClass}
-            placeholder="0,00"
-          />
-        </label>
+        <FormInput
+          label="Valor (R$)"
+          prefixIcon={DollarSign}
+          type="text"
+          inputMode="decimal"
+          value={amountReais}
+          onChange={(e) => setAmountReais(e.target.value)}
+          placeholder="0,00"
+        />
 
-        <label className="block">
-          <span className={formLabelClass}>Vencimento</span>
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={formInputClass} />
-        </label>
+        <FormInput
+          label="Vencimento"
+          prefixIcon={Calendar}
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+        />
 
-        <label className="block">
-          <span className={formLabelClass}>Ciclo (YYYY-MM, opcional)</span>
-          <input
-            type="text"
-            value={billingCycleKey}
-            onChange={(e) => setBillingCycleKey(e.target.value)}
-            placeholder="2026-06"
-            className={formInputClass}
-          />
-        </label>
+        <FormInput
+          label="Ciclo (YYYY-MM, opcional)"
+          prefixIcon={CalendarRange}
+          type="text"
+          value={billingCycleKey}
+          onChange={(e) => setBillingCycleKey(e.target.value)}
+          placeholder="2026-06"
+        />
 
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2.5 text-sm text-slate-700">
           <input
             type="checkbox"
             checked={registerPayment}
             onChange={(e) => setRegisterPayment(e.target.checked)}
-            className="rounded border-slate-300 text-indigo-600"
+            className="h-4 w-4 rounded border-slate-300 text-form-primary focus:ring-form-primary/30"
           />
           Registrar pagamento antecipado/manual agora
         </label>
 
         {registerPayment ? (
-          <div className="space-y-4 rounded-md border border-slate-100 bg-slate-50 p-4">
-            <label className="block">
-              <span className={formLabelClass}>Método</span>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as ManualPaymentMethodValue)}
-                className={`${formSelectClass} bg-white`}
-              >
-                {MANUAL_PAYMENT_METHOD_VALUES.map((value) => (
-                  <option key={value} value={value}>
-                    {MANUAL_PAYMENT_METHOD_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className={formLabelClass}>Observações do pagamento</span>
+          <div className="space-y-4 rounded-[10px] bg-form-field/60 p-4">
+            <FormSelect
+              label="Método"
+              prefixIcon={CreditCard}
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as ManualPaymentMethodValue)}
+            >
+              {MANUAL_PAYMENT_METHOD_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {MANUAL_PAYMENT_METHOD_LABELS[value]}
+                </option>
+              ))}
+            </FormSelect>
+            <FormField label="Observações do pagamento">
               <textarea
                 value={paymentNotes}
                 onChange={(e) => setPaymentNotes(e.target.value)}
                 rows={2}
                 maxLength={500}
-                className={`${formTextareaClass} bg-white`}
+                className={formTextareaClass}
               />
-            </label>
+            </FormField>
           </div>
         ) : null}
       </form>
