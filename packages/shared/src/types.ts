@@ -174,6 +174,16 @@ export interface AccountListItem {
   name: string;
   slug: string;
   status: 'active' | 'suspended';
+  subscription: {
+    dueDay: number;
+    nextDueDate: string;
+    status: 'active' | 'past_due' | 'canceled';
+    platformPlan: {
+      id: string;
+      name: string;
+      priceCents: number;
+    };
+  } | null;
   users: Array<{
     id: string;
     name: string;

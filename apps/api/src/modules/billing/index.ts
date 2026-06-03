@@ -7,5 +7,5 @@ export async function registerBillingModule(app: FastifyInstance) {
 }
 
 export async function registerPlatformBillingModule(app: FastifyInstance) {
-  await app.register(platformBillingRoutes, { prefix: '/api/admin' });
+  await app.register(platformBillingRoutes);
 }

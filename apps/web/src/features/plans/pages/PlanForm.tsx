@@ -1,11 +1,13 @@
 import React from 'react';
-import { useForm, type FieldErrors } from 'react-hook-form';
+import { useForm, Controller, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { planSchema, type PlanInput } from '@client-manager/shared';
 import { showToast } from '../../../shared/utils/toast';
+import { CurrencyInput } from '../../../shared/ui/forms/CurrencyInput';
 import { formInputClass, formLabelClass, formSelectClass, formTextareaClass } from '../../../shared/ui/forms/form-styles';
 
 interface PlanFormProps {
+  formId: string;
   onSubmit: (data: PlanInput) => Promise<void>;
   onCancel: () => void;
   initialData?: Partial<PlanInput>;
@@ -25,8 +27,14 @@ function sanitizePlanForForm(plan: Partial<PlanInput>): PlanInput {
 }
 
 export const PlanForm = React.forwardRef<HTMLFormElement, PlanFormProps>(
-  ({ onSubmit, onCancel, initialData }, ref) => {
-    const { register, handleSubmit, reset, formState: { errors } } = useForm<PlanInput>({
+  ({ formId, onSubmit, onCancel, initialData }, ref) => {
+    const {
+      register,
+      control,
+      handleSubmit,
+      reset,
+      formState: { errors },
+    } = useForm<PlanInput>({
       resolver: zodResolver(planSchema),
       defaultValues: {
         billingCycle: 'monthly',
@@ -48,6 +56,8 @@ export const PlanForm = React.forwardRef<HTMLFormElement, PlanFormProps>(
     const onSubmitWrapper = async (data: PlanInput) => {
       await onSubmit({
         ...data,
+        name: data.name.trim(),
+        description: data.description?.trim() || undefined,
         extraConnectionPrice: data.extraConnectionPrice ?? 0,
       });
     };
@@ -62,7 +72,8 @@ export const PlanForm = React.forwardRef<HTMLFormElement, PlanFormProps>(
     return (
       <form
         ref={ref}
-        id="plan-form"
+        id={formId}
+        noValidate
         onSubmit={handleSubmit(onSubmitWrapper, onInvalid)}
         className="space-y-4"
       >
@@ -84,12 +95,20 @@ export const PlanForm = React.forwardRef<HTMLFormElement, PlanFormProps>(
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block">
-              <span className={formLabelClass}>Preço (R$)</span>
-              <input
-                type="number"
-                step="0.01"
-                {...register('price', { valueAsNumber: true })}
-                className={formInputClass}
+              <span className={formLabelClass}>Preço</span>
+              <Controller
+                name="price"
+                control={control}
+                render={({ field }) => (
+                  <CurrencyInput
+                    ref={field.ref}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    className={formInputClass}
+                    placeholder="R$ 0,00"
+                  />
+                )}
               />
             </label>
             {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>}
@@ -118,6 +137,7 @@ export const PlanForm = React.forwardRef<HTMLFormElement, PlanFormProps>(
                 type="number"
                 {...register('maxConnections', { valueAsNumber: true })}
                 className={formInputClass}
+                onFocus={(e) => e.target.select()}
               />
             </label>
             {errors.maxConnections && (

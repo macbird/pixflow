@@ -1,10 +1,10 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { plansApi } from '../api/plans.api';
 import { PlanForm } from '../pages/PlanForm';
 import { FormModal } from '../../../shared/ui/modals/FormModal';
 import { LoadingSpinner } from '../../../shared/ui/layout/LoadingSpinner';
-import { useCrud } from '../../../shared/hooks/useCrud';
+import { showToast } from '../../../shared/utils/toast';
 import type { PlanInput } from '@client-manager/shared';
 
 interface PlanFormModalProps {
@@ -14,7 +14,8 @@ interface PlanFormModalProps {
 }
 
 export const PlanFormModal: React.FC<PlanFormModalProps> = ({ isOpen, editId, onClose }) => {
-  const formRef = React.useRef<HTMLFormElement>(null);
+  const queryClient = useQueryClient();
+  const formId = editId ? `plan-form-edit-${editId}` : 'plan-form-create';
 
   const { data: plan, isLoading } = useQuery({
     queryKey: ['plans', editId],
@@ -22,15 +23,31 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ isOpen, editId, on
     enabled: isOpen && Boolean(editId),
   });
 
-  const { create, update, isCreating, isUpdating } = useCrud<unknown, PlanInput>({
-    queryKey: ['plans'],
-    createFn: plansApi.create,
-    updateFn: plansApi.update,
-    listPath: '/plans',
-    entityName: 'Plano',
-    navigateOnSuccess: false,
-    onSuccess: onClose,
+  const createMutation = useMutation({
+    mutationFn: plansApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      showToast.success('Plano criado com sucesso!');
+      onClose();
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      showToast.error(err.response?.data?.message ?? 'Erro ao criar plano');
+    },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: (args: { id: string; data: PlanInput }) => plansApi.update(args.id, args.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      showToast.success('Plano atualizado com sucesso!');
+      onClose();
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      showToast.error(err.response?.data?.message ?? 'Erro ao atualizar plano');
+    },
+  });
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <FormModal
@@ -38,24 +55,30 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ isOpen, editId, on
       onClose={onClose}
       title={editId ? 'Editar plano' : 'Novo plano'}
       size="lg"
-      isPending={isCreating || isUpdating}
-      onSave={() => formRef.current?.requestSubmit()}
+      formId={!editId || plan ? formId : undefined}
+      isPending={isPending}
+      saveLabel={editId ? 'Salvar' : 'Criar'}
     >
-      {editId && isLoading ? (
+      {!editId ? (
+        <PlanForm
+          key="create"
+          formId={formId}
+          onSubmit={async (data) => {
+            await createMutation.mutateAsync(data);
+          }}
+          onCancel={onClose}
+        />
+      ) : isLoading || !plan ? (
         <div className="relative h-32">
           <LoadingSpinner />
         </div>
       ) : (
         <PlanForm
-          key={editId ?? 'create'}
-          ref={formRef}
-          initialData={editId ? plan : undefined}
+          key={editId}
+          formId={formId}
+          initialData={plan}
           onSubmit={async (data) => {
-            if (editId) {
-              await update(editId, data);
-              return;
-            }
-            await create(data);
+            await updateMutation.mutateAsync({ id: editId, data });
           }}
           onCancel={onClose}
         />

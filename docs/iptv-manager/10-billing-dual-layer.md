@@ -28,7 +28,7 @@ Toda fatura tem:
 | `customerId` | `null` | cliente cobrado |
 | `amount` | valor do **PlatformPlan** (admin em Configurações) | valor do **`Plan`** do cliente (`/plans`) |
 | `billingCycleKey` | `2026-06` | `2026-06` |
-| `dueDate` | calculado por `due_day` da assinatura | `due_day` do cliente ou ciclo |
+| `dueDate` | calculado por `nextDueDate` da assinatura SaaS | `due_day` do cliente ou ciclo |
 | `status` | draft → open → paid / overdue / canceled | idem |
 | `paymentProvider` | PSP usado na cobrança (persistido ao gerar pagamento) | idem — **escolhido por roteamento de valor** |
 | `paymentDeliveryType` | `emv` \| `checkout_link` — formato de entrega | idem — definido pelo adapter |
@@ -158,6 +158,8 @@ flowchart LR
 | Escopo | API |
 |--------|-----|
 | Plataforma | `GET/PATCH /api/admin/platform-settings` (preço, provider, credenciais criptografadas) |
+| Contas (admin) | `POST/PATCH /api/admin/tenants` — criar/editar conta com `dueDate`; inclui `AccountSubscription` |
+| Fatura SaaS manual | `POST /api/admin/tenants/:id/invoices` — gera fatura `scope=platform` no `nextDueDate` e avança +1 mês |
 | Tenant | `GET/PATCH /api/settings` (whatsapp, automation) |
 | Tenant (credenciais PIX) | `GET/PUT /api/settings/payment-credentials` — CRUD por `provider` |
 | Tenant (roteamento) | `GET/PUT /api/settings/payment-routing` — regras `minAmountCents` → `provider` |
@@ -290,7 +292,8 @@ model AccountSubscription {
   account     Account  @relation(...)
   platformPlanId String
   platformPlan PlatformPlan @relation(...)
-  dueDay      Int      // 1-28
+  dueDay      Int      // 1-28 — dia recorrente derivado de nextDueDate
+  nextDueDate DateTime // próxima data de vencimento SaaS (fatura platform)
   status      SubscriptionStatus // active, past_due, canceled
   startedAt   DateTime @default(now())
 }
@@ -412,10 +415,12 @@ sequenceDiagram
 | # | Decisão | Sugestão default |
 |---|---------|------------------|
 | 1 | Preço SaaS | Plano fixo mensal por tenant (MVP); depois tier por qtd clientes |
-| 2 | `due_day` | Dia 10 de cada mês (configurável na assinatura) |
-| 3 | Inadimplência | Após N dias `overdue` → suspender `account.status` |
-| 4 | Geração | Job cron dia 1 (ou D-3 do vencimento) |
-| 5 | Pro-rata | Backlog: não no MVP |
+| 2 | Vencimento SaaS | `AccountSubscription.nextDueDate` definido ao criar/editar conta no admin |
+| 3 | `dueDay` | Derivado de `nextDueDate` (cap 28) para ciclos mensais recorrentes |
+| 4 | Geração de fatura | Manual: `POST /api/admin/tenants/:id/invoices` no vencimento; depois job cron |
+| 5 | Após gerar fatura | Avançar `nextDueDate` +1 mês; bloquear duplicata no mesmo `billingCycleKey` |
+| 6 | Inadimplência | Após N dias `overdue` → suspender `account.status` |
+| 7 | Pro-rata | Backlog: não no MVP |
 
 ### B) Cobrança tenant → cliente (igual spec Fase 1)
 

@@ -304,6 +304,55 @@ export class InvoicesService {
   }
 
   /**
+   * Creates a platform SaaS invoice for a tenant subscription cycle.
+   */
+  async createPlatformFromSubscription(params: {
+    accountId: string;
+    amountCents: number;
+    dueDate: Date;
+    billingCycleKey: string;
+  }) {
+    if (!Number.isInteger(params.amountCents) || params.amountCents <= 0) {
+      throw new InvoiceActionError('Valor inválido', 'NOT_ALLOWED');
+    }
+
+    const activeConflict = await prisma.invoice.findFirst({
+      where: {
+        scope: 'platform',
+        accountId: params.accountId,
+        customerId: null,
+        billingCycleKey: params.billingCycleKey,
+        status: { not: 'canceled' },
+      },
+    });
+
+    if (activeConflict) {
+      throw new InvoiceActionError('Já existe uma fatura SaaS ativa para este ciclo', 'CONFLICT');
+    }
+
+    const created = await prisma.invoice.create({
+      data: {
+        scope: 'platform',
+        accountId: params.accountId,
+        customerId: null,
+        billingCycleKey: params.billingCycleKey,
+        amountCents: params.amountCents,
+        dueDate: params.dueDate,
+        status: 'open',
+      },
+      include: {
+        account: { select: { id: true, name: true } },
+        customer: { select: { id: true, name: true } },
+        payments: true,
+        replacesInvoice: { select: { id: true, status: true } },
+        replacement: { select: { id: true, status: true, amountCents: true } },
+      },
+    });
+
+    return this.mapDetail({ ...created, payments: [] });
+  }
+
+  /**
    * Creates a manual tenant invoice for a customer.
    */
   async createManual(

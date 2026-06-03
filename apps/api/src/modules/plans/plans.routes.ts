@@ -46,8 +46,13 @@ export async function plansRoutes(app: FastifyInstance) {
     const tenantId = requireTenantId(request, reply);
     if (!tenantId) return;
 
-    const data = planSchema.parse(request.body);
-    return await plansService.create(tenantId, data);
+    const parsed = planSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        message: parsed.error.errors[0]?.message ?? 'Dados do plano inválidos',
+      });
+    }
+    return await plansService.create(tenantId, parsed.data);
   });
 
   app.put('/:id', async (request, reply) => {
@@ -55,8 +60,13 @@ export async function plansRoutes(app: FastifyInstance) {
     if (!tenantId) return;
 
     const { id } = request.params as { id: string };
-    const data = planSchema.parse(request.body);
-    await plansService.update(tenantId, id, data);
+    const parsed = planSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        message: parsed.error.errors[0]?.message ?? 'Dados do plano inválidos',
+      });
+    }
+    await plansService.update(tenantId, id, parsed.data);
     return reply.status(204).send();
   });
 

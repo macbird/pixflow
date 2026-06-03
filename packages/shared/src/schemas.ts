@@ -24,12 +24,20 @@ export const registerSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const planSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  price: z.number().min(0),
-  billingCycle: z.enum(['monthly', 'quarterly', 'yearly']),
-  maxConnections: z.number().int().min(1),
-  extraConnectionPrice: z.preprocess((v) => (v === null || v === undefined ? 0 : v), z.number().min(0).default(0)),
+  name: z.string().trim().min(1, 'Informe o nome do plano'),
+  description: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().optional(),
+  ),
+  price: z.coerce.number().min(0, 'Informe um preço válido'),
+  billingCycle: z.enum(['monthly', 'quarterly', 'yearly'], {
+    errorMap: () => ({ message: 'Selecione o ciclo de cobrança' }),
+  }),
+  maxConnections: z.coerce.number().int().min(1, 'Informe ao menos 1 conexão'),
+  extraConnectionPrice: z.preprocess(
+    (v) => (v === null || v === undefined || v === '' ? 0 : v),
+    z.coerce.number().min(0).default(0),
+  ),
   status: z.enum(['active', 'archived']).default('active'),
 });
 

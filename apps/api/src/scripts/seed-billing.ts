@@ -132,6 +132,7 @@ async function main() {
         accountId: account.id,
         platformPlanId: plan.id,
         dueDay: 10,
+        nextDueDate: dueDateForCycle(cycleKey(new Date().getFullYear(), new Date().getMonth()), 10),
         status: account.status === 'suspended' ? 'past_due' : 'active',
       },
       update: { platformPlanId: plan.id },

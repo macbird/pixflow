@@ -1,7 +1,7 @@
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { tenantsApi } from '../api/admin.api';
-import { Users, Key, Edit2 } from 'lucide-react';
+import { Users, Key, Edit2, Receipt } from 'lucide-react';
 import { PageLayout } from '../../../shared/ui/layout/PageLayout';
 import { PageHeaderActions } from '../../../shared/ui/layout/PageHeaderActions';
 import { ResponsiveDataGrid } from '../../../shared/ui/layout/ResponsiveDataGrid';
@@ -57,8 +57,33 @@ export const AccountsPage: React.FC = () => {
     setResetUser({ id: owner.id, name: owner.name, email: owner.email });
   };
 
+  const generateInvoiceMutation = useMutation({
+    mutationFn: tenantsApi.generateInvoice,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      showToast.success('Fatura SaaS gerada');
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      showToast.error(err.response?.data?.message ?? 'Erro ao gerar fatura');
+    },
+  });
+
+  const formatDueDate = (value?: string | null) =>
+    value ? new Date(value).toLocaleDateString('pt-BR') : '—';
+
   const columns = [
-    { header: 'Nome', accessor: (a: AccountListItem) => a.name, width: '35%' },
+    { header: 'Nome', accessor: (a: AccountListItem) => a.name, width: '28%' },
+    {
+      header: 'Vencimento',
+      width: '18%',
+      align: 'center' as const,
+      accessor: (a: AccountListItem) => (
+        <span className="text-sm text-slate-700">
+          {formatDueDate(a.subscription?.nextDueDate)}
+        </span>
+      ),
+    },
     {
       header: 'Status',
       width: '20%',
@@ -78,7 +103,17 @@ export const AccountsPage: React.FC = () => {
       width: '200px',
       align: 'right' as const,
       accessor: (a: AccountListItem) => (
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-end space-x-1">
+          <button
+            type="button"
+            onClick={() => generateInvoiceMutation.mutate(a.id)}
+            disabled={!a.subscription || generateInvoiceMutation.isPending}
+            className="p-2 text-slate-500 hover:text-emerald-600 disabled:opacity-40"
+            aria-label="Gerar fatura SaaS"
+            title="Gerar fatura SaaS"
+          >
+            <Receipt className="h-4 w-4" />
+          </button>
           <button
             type="button"
             onClick={() =>
@@ -128,6 +163,12 @@ export const AccountsPage: React.FC = () => {
 
       <div className="flex w-[55%] shrink-0 items-center gap-2">
         <div className="min-w-0 flex-1 text-center">
+          <div className="text-xs font-medium text-slate-700">
+            {formatDueDate(a.subscription?.nextDueDate)}
+          </div>
+        </div>
+
+        <div className="min-w-0 flex-1 text-center">
           <span
             className={`rounded-full border border-current px-2 py-0.5 text-[9px] font-black uppercase tracking-wider opacity-80 ${
               a.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -137,7 +178,16 @@ export const AccountsPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex w-10 shrink-0 items-center justify-end">
+        <div className="flex w-16 shrink-0 items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => generateInvoiceMutation.mutate(a.id)}
+            disabled={!a.subscription || generateInvoiceMutation.isPending}
+            className="p-2 text-slate-400 hover:text-emerald-600 disabled:opacity-40"
+            aria-label="Gerar fatura SaaS"
+          >
+            <Receipt className="h-4 w-4" />
+          </button>
           <button
             type="button"
             onClick={() => openResetPassword(a)}
@@ -188,7 +238,7 @@ export const AccountsPage: React.FC = () => {
         data={items}
         columns={columns}
         renderMobileCard={renderMobileCard}
-        mobileHeaderTitles={['Nome', 'Status']}
+        mobileHeaderTitles={['Nome', 'Venc.', 'Status']}
         isLoading={isLoading}
       />
 

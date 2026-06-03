@@ -1,10 +1,10 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tenantsApi } from '../api/admin.api';
 import { AccountForm, type AccountCreateInput, type AccountEditInput } from '../pages/AccountForm';
 import { FormModal } from '../../../shared/ui/modals/FormModal';
 import { LoadingSpinner } from '../../../shared/ui/layout/LoadingSpinner';
-import { useCrud } from '../../../shared/hooks/useCrud';
+import { showToast } from '../../../shared/utils/toast';
 
 interface AccountFormModalProps {
   isOpen: boolean;
@@ -17,7 +17,8 @@ export const AccountFormModal: React.FC<AccountFormModalProps> = ({
   editId,
   onClose,
 }) => {
-  const formRef = React.useRef<HTMLFormElement>(null);
+  const queryClient = useQueryClient();
+  const formId = editId ? `account-form-edit-${editId}` : 'account-form-create';
 
   const { data: account, isLoading } = useQuery({
     queryKey: ['accounts', editId],
@@ -25,21 +26,32 @@ export const AccountFormModal: React.FC<AccountFormModalProps> = ({
     enabled: isOpen && Boolean(editId),
   });
 
-  const { create, update, isCreating, isUpdating } = useCrud<
-    unknown,
-    AccountCreateInput | AccountEditInput
-  >({
-    queryKey: ['accounts'],
-    createFn: tenantsApi.create,
-    updateFn: (accountId, data) =>
-      tenantsApi.toggleStatus(accountId, (data as AccountEditInput).status),
-    listPath: '/admin/accounts',
-    entityName: 'Conta',
-    navigateOnSuccess: false,
-    onSuccess: onClose,
+  const createMutation = useMutation({
+    mutationFn: tenantsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      showToast.success('Conta criada com sucesso!');
+      onClose();
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      showToast.error(err.response?.data?.message ?? 'Erro ao criar conta');
+    },
   });
 
-  const isPending = isCreating || isUpdating;
+  const updateMutation = useMutation({
+    mutationFn: (args: { id: string; data: AccountEditInput }) =>
+      tenantsApi.update(args.id, args.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      showToast.success('Conta atualizada com sucesso!');
+      onClose();
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      showToast.error(err.response?.data?.message ?? 'Erro ao atualizar conta');
+    },
+  });
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <FormModal
@@ -47,31 +59,31 @@ export const AccountFormModal: React.FC<AccountFormModalProps> = ({
       onClose={onClose}
       title={editId ? 'Editar conta' : 'Nova conta'}
       size="xl"
+      formId={!editId || account ? formId : undefined}
       isPending={isPending}
       saveLabel={editId ? 'Salvar' : 'Criar'}
-      onSave={() => formRef.current?.requestSubmit()}
     >
-      {editId && isLoading ? (
+      {!editId ? (
+        <AccountForm
+          key="create"
+          formId={formId}
+          mode="create"
+          onSubmit={async (data) => {
+            await createMutation.mutateAsync(data as AccountCreateInput);
+          }}
+        />
+      ) : isLoading || !account ? (
         <div className="relative h-32">
           <LoadingSpinner />
         </div>
-      ) : editId && account ? (
+      ) : (
         <AccountForm
-          key={editId ?? 'create'}
-          ref={formRef}
+          key={editId}
+          formId={formId}
           mode="edit"
           initialData={account}
           onSubmit={async (data) => {
-            await update(editId, data as AccountEditInput);
-          }}
-        />
-      ) : (
-        <AccountForm
-          key="create"
-          ref={formRef}
-          mode="create"
-          onSubmit={async (data) => {
-            await create(data as AccountCreateInput);
+            await updateMutation.mutateAsync({ id: editId, data });
           }}
         />
       )}

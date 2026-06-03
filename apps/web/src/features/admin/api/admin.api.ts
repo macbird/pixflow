@@ -1,5 +1,9 @@
 import { api } from '../../../shared/api/api.client';
 import type { AccountListItem, PaginatedResponse } from '@client-manager/shared';
+import type {
+  CreateTenantAccountInput,
+  UpdateTenantAccountInput,
+} from '@client-manager/shared';
 import type { BillingSnapshot } from '../../dashboard/api/dashboard.api';
 import type { MonthlyBillingPoint } from '../../../shared/ui/billing/BillingMonthlyBars';
 import type { RecentPaymentItem } from '../../../shared/ui/billing/RecentPaymentsList';
@@ -32,14 +36,16 @@ export const tenantsApi = {
     const response = await api.get(`/admin/tenants/${id}`);
     return response.data;
   },
-  create: async (data: {
-    name: string;
-    slug?: string;
-    ownerName: string;
-    ownerEmail: string;
-    initialPassword?: string;
-  }) => {
+  create: async (data: CreateTenantAccountInput) => {
     const response = await api.post('/admin/tenants', data);
+    return response.data;
+  },
+  update: async (id: string, data: UpdateTenantAccountInput) => {
+    const response = await api.patch(`/admin/tenants/${id}`, data);
+    return response.data;
+  },
+  generateInvoice: async (id: string) => {
+    const response = await api.post(`/admin/tenants/${id}/invoices`);
     return response.data;
   },
   toggleStatus: async (id: string, status: 'active' | 'suspended') => {

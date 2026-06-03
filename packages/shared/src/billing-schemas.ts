@@ -42,3 +42,21 @@ export const updateActivationStatusSchema = z.object({
 });
 
 export type UpdateActivationStatusInput = z.infer<typeof updateActivationStatusSchema>;
+
+export const createTenantAccountSchema = z.object({
+  name: z.string().min(1),
+  slug: z.string().min(1).optional(),
+  ownerName: z.string().min(1),
+  ownerEmail: z.string().email(),
+  initialPassword: z.string().min(6).optional(),
+  dueDate: z.string().min(1),
+});
+
+export type CreateTenantAccountInput = z.infer<typeof createTenantAccountSchema>;
+
+export const updateTenantAccountSchema = z.object({
+  status: z.enum(['active', 'suspended']).optional(),
+  dueDate: z.string().min(1).optional(),
+});
+
+export type UpdateTenantAccountInput = z.infer<typeof updateTenantAccountSchema>;

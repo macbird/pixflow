@@ -12,7 +12,9 @@ interface FormModalProps {
   title: string;
   description?: string;
   children: React.ReactNode;
-  onSave: () => void;
+  /** When set, the save button submits the form with this id (preferred over onSave). */
+  formId?: string;
+  onSave?: () => void;
   isPending?: boolean;
   saveLabel?: string;
   pendingLabel?: string;
@@ -29,6 +31,7 @@ export const FormModal: React.FC<FormModalProps> = ({
   title,
   description,
   children,
+  formId,
   onSave,
   isPending = false,
   saveLabel = 'Salvar',
@@ -49,8 +52,9 @@ export const FormModal: React.FC<FormModalProps> = ({
         </button>
       ) : null}
       <button
-        type="button"
-        onClick={onSave}
+        type={formId ? 'submit' : 'button'}
+        form={formId}
+        onClick={formId ? undefined : onSave}
         disabled={isPending || saveDisabled}
         className={`${submitClass}${hideCancel ? ' w-full' : ''}`}
       >

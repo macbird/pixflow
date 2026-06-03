@@ -271,6 +271,7 @@ model AccountSubscription {
   platformPlanId String
   platformPlan   PlatformPlan       @relation(fields: [platformPlanId], references: [id])
   dueDay         Int                @default(10)
+  nextDueDate    DateTime
   status         SubscriptionStatus @default(active)
   startedAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt

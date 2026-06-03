@@ -59,7 +59,8 @@ Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [03-integ
 |---------|---------|
 | Auth admin | Login separado (`adminToken`), perfil, troca de senha |
 | Contas (tenants) | Listagem paginada + busca (nome, slug, e-mail owner) |
-| CRUD conta | Criar tenant + owner, editar status (ativa/suspensa) |
+| CRUD conta | Criar tenant + owner + **vencimento SaaS** (`nextDueDate`), editar status/vencimento |
+| Fatura SaaS por conta | Botão na listagem → `POST /admin/tenants/:id/invoices` |
 | Reset senha | Modal por conta |
 | Dashboard admin | KPIs + billing SaaS (MRR, inadimplência, gráfico mensal) |
 | Shell admin | `AdminShell` com nav: contas, faturas SaaS, pagamentos, configurações |
