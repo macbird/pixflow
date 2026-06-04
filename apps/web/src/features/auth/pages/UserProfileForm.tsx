@@ -16,7 +16,6 @@ interface UserProfileFormProps {
     name?: string;
     email?: string;
     account?: { name?: string };
-    role?: string;
   };
 }
 
@@ -66,12 +65,6 @@ export const UserProfileForm = React.forwardRef<HTMLFormElement, UserProfileForm
             <span className="font-medium text-slate-900">{initialData.name}</span>
             <span className="mx-2 text-slate-300">·</span>
             {initialData.account.name}
-            {initialData.role ? (
-              <>
-                <span className="mx-2 text-slate-300">·</span>
-                {initialData.role}
-              </>
-            ) : null}
           </div>
         )}
 

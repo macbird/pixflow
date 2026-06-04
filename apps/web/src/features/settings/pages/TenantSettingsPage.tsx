@@ -7,14 +7,14 @@ import { WhatsAppProviderFields } from '../components/PaymentProviderFields';
 import {
   PaymentCredentialsSection,
   buildCredentialFormState,
+  resolveInitialPaymentProvider,
   type PaymentCredentialFormState,
 } from '../components/PaymentCredentialsSection';
 import {
-  PaymentRoutingSection,
-  buildRoutingFormState,
-  routingFormToPayload,
-  type PaymentRoutingFormRule,
+  extractSelectedProvider,
+  selectedProviderToPayload,
 } from '../components/PaymentRoutingSection';
+import type { PaymentProviderValue } from '@client-manager/shared';
 import { showToast } from '../../../shared/utils/toast';
 
 function formatBrl(cents: number) {
@@ -29,7 +29,7 @@ export const TenantSettingsPage: React.FC = () => {
   });
 
   const [credentials, setCredentials] = React.useState<PaymentCredentialFormState[]>([]);
-  const [routingRules, setRoutingRules] = React.useState<PaymentRoutingFormRule[]>([]);
+  const [paymentProvider, setPaymentProvider] = React.useState<PaymentProviderValue>('mercadopago');
   const [whatsappProvider, setWhatsappProvider] = React.useState('evolution');
   const [whatsappInstanceUrl, setWhatsappInstanceUrl] = React.useState('');
   const [whatsappApiKey, setWhatsappApiKey] = React.useState('');
@@ -37,7 +37,12 @@ export const TenantSettingsPage: React.FC = () => {
   React.useEffect(() => {
     if (!data) return;
     setCredentials(buildCredentialFormState(data.paymentCredentials));
-    setRoutingRules(buildRoutingFormState(data.paymentRouting));
+    setPaymentProvider(
+      resolveInitialPaymentProvider(
+        data.paymentCredentials,
+        extractSelectedProvider(data.paymentRouting),
+      ),
+    );
     setWhatsappProvider(data.whatsapp.provider);
     setWhatsappInstanceUrl(data.whatsapp.instanceUrl ?? '');
   }, [data]);
@@ -47,13 +52,13 @@ export const TenantSettingsPage: React.FC = () => {
       await tenantBillingApi.updatePaymentCredentials({
         credentials: credentials.map((item) => ({
           provider: item.provider,
-          active: item.active,
+          active: item.provider === paymentProvider,
           ...(item.apiKey ? { apiKey: item.apiKey } : {}),
           ...(item.webhookToken ? { webhookToken: item.webhookToken } : {}),
         })),
       });
 
-      await tenantBillingApi.updatePaymentRouting(routingFormToPayload(routingRules));
+      await tenantBillingApi.updatePaymentRouting(selectedProviderToPayload(paymentProvider));
 
       await tenantBillingApi.updateSettings({
         whatsappProvider,
@@ -132,23 +137,13 @@ export const TenantSettingsPage: React.FC = () => {
 
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-semibold text-slate-900">Meios de pagamento (PIX)</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Passo 1: cadastre e ative os meios que você tem conta (API key de cada um). Só meios
-            ativos podem ser usados nas regras abaixo.
-          </p>
           <div className="mt-4">
-            <PaymentCredentialsSection credentials={credentials} onChange={setCredentials} />
-          </div>
-        </section>
-
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">Escolha automática por valor</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Passo 2: defina a partir de qual valor cada meio é usado. O sistema aplica isso ao gerar
-            o PIX de cada fatura dos seus clientes.
-          </p>
-          <div className="mt-4">
-            <PaymentRoutingSection rules={routingRules} onChange={setRoutingRules} />
+            <PaymentCredentialsSection
+              selectedProvider={paymentProvider}
+              onProviderChange={setPaymentProvider}
+              credentials={credentials}
+              onChange={setCredentials}
+            />
           </div>
         </section>
 
