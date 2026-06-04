@@ -5,6 +5,7 @@ import {
   WHATSAPP_PROVIDER_LABELS,
   WHATSAPP_PROVIDER_VALUES,
 } from '@client-manager/shared';
+import { SecretCredentialField } from './SecretCredentialField';
 
 interface PaymentProviderFieldsProps {
   paymentProvider: string;
@@ -42,26 +43,22 @@ export const PaymentProviderFields: React.FC<PaymentProviderFieldsProps> = ({
         ))}
       </select>
     </div>
-    <div>
-      <label className="block text-sm font-medium text-slate-700">API Key</label>
-      <input
-        type="password"
-        value={paymentApiKey}
-        onChange={(e) => onPaymentApiKeyChange(e.target.value)}
-        placeholder={apiKeyConfigured ? '•••••••• (deixe vazio para manter)' : 'Cole a API key do sandbox'}
-        className="mt-1 block w-full max-w-lg rounded-md border border-slate-300 p-2 shadow-sm font-mono text-sm"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-slate-700">Token do webhook</label>
-      <input
-        type="password"
-        value={paymentWebhookToken}
-        onChange={(e) => onPaymentWebhookTokenChange(e.target.value)}
-        placeholder={webhookConfigured ? '•••••••• (deixe vazio para manter)' : 'Opcional'}
-        className="mt-1 block w-full max-w-lg rounded-md border border-slate-300 p-2 shadow-sm font-mono text-sm"
-      />
-    </div>
+    <SecretCredentialField
+      id="platform-payment-api-key"
+      label="API Key / Access Token"
+      value={paymentApiKey}
+      configured={Boolean(apiKeyConfigured)}
+      onChange={onPaymentApiKeyChange}
+      emptyPlaceholder="Cole o Access Token do sandbox"
+    />
+    <SecretCredentialField
+      id="platform-payment-webhook"
+      label="Token do webhook"
+      value={paymentWebhookToken}
+      configured={Boolean(webhookConfigured)}
+      onChange={onPaymentWebhookTokenChange}
+      emptyPlaceholder="Opcional"
+    />
   </div>
 );
 
@@ -109,15 +106,13 @@ export const WhatsAppProviderFields: React.FC<WhatsAppProviderFieldsProps> = ({
         className="mt-1 block w-full max-w-lg rounded-md border border-slate-300 p-2 shadow-sm"
       />
     </div>
-    <div>
-      <label className="block text-sm font-medium text-slate-700">API Key / Token</label>
-      <input
-        type="password"
-        value={whatsappApiKey}
-        onChange={(e) => onApiKeyChange(e.target.value)}
-        placeholder={apiKeyConfigured ? '•••••••• (deixe vazio para manter)' : 'Token da instância'}
-        className="mt-1 block w-full max-w-lg rounded-md border border-slate-300 p-2 shadow-sm font-mono text-sm"
-      />
-    </div>
+    <SecretCredentialField
+      id="whatsapp-api-key"
+      label="API Key / Token"
+      value={whatsappApiKey}
+      configured={Boolean(apiKeyConfigured)}
+      onChange={onApiKeyChange}
+      emptyPlaceholder="Token da instância"
+    />
   </div>
 );

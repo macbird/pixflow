@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { PlatformSettingsService } from './platform-settings.service';
 import { InvoicesService } from './invoices.service';
+import { InvoiceChargeService } from './invoice-charge.service';
 import { PaymentsService } from './payments.service';
 import { handleInvoiceActionError } from './invoice-route.util';
 import { pickListFilters } from '../../core/utils/parse-list-filters';
@@ -10,6 +11,7 @@ const PAYMENT_LIST_FILTER_KEYS = ['method', 'billingCycleKey', 'paidFrom', 'paid
 
 const platformSettings = new PlatformSettingsService();
 const invoicesService = new InvoicesService();
+const invoiceChargeService = new InvoiceChargeService();
 const paymentsService = new PaymentsService();
 
 export async function platformBillingRoutes(app: FastifyInstance) {
@@ -102,9 +104,18 @@ export async function platformBillingRoutes(app: FastifyInstance) {
   app.post('/invoices/:id/generate-pix', async (request, reply) => {
     const { id } = request.params as { id: string };
     try {
-      return await invoicesService.generatePixStub(id);
-    } catch {
-      return reply.status(404).send({ message: 'Invoice not found' });
+      return await invoicesService.generatePayment(id);
+    } catch (error) {
+      return handleInvoiceActionError(reply, error);
+    }
+  });
+
+  app.post('/invoices/:id/send-charge', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    try {
+      return await invoiceChargeService.sendChargeViaWhatsApp(id);
+    } catch (error) {
+      return handleInvoiceActionError(reply, error);
     }
   });
 

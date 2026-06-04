@@ -55,6 +55,10 @@ export const platformBillingApi = {
     const { data } = await api.post(`/admin/invoices/${invoiceId}/generate-pix`);
     return data;
   },
+  sendCharge: async (invoiceId: string) => {
+    const { data } = await api.post(`/admin/invoices/${invoiceId}/send-charge`);
+    return data;
+  },
   markPaid: async (invoiceId: string) => {
     const { data } = await api.post(`/admin/invoices/${invoiceId}/mark-paid`);
     return data;
@@ -124,6 +128,10 @@ export const tenantBillingApi = {
   },
   generatePix: async (invoiceId: string) => {
     const { data } = await api.post(`/invoices/${invoiceId}/generate-pix`);
+    return data;
+  },
+  sendCharge: async (invoiceId: string) => {
+    const { data } = await api.post(`/invoices/${invoiceId}/send-charge`);
     return data;
   },
   markPaid: async (invoiceId: string, payload?: RegisterPaymentInput) => {

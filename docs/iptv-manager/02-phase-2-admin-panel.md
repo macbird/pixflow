@@ -2,7 +2,7 @@
 
 Referência: spec §2.2 (login admin separado), §10 Fase 2.
 
-**Status implementação:** ✅ **Concluída** (ver [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)).
+**Status implementação:** ✅ **Concluída** — verificada em 04/06/2026 ([IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md#verificação-fases-1-e-2-04062026)).
 
 **Próxima etapa relacionada:** [Fase 2.5 — Cobrança plataforma → tenant](./10-billing-dual-layer.md) (SaaS mensal; não faz parte desta fase).
 

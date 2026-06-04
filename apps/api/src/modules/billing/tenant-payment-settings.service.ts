@@ -9,6 +9,7 @@ import {
   type TenantPaymentRoutingRuleDto,
 } from '@client-manager/shared';
 import { PaymentRouterService } from '../../integrations/payment/payment-router.service';
+import { validatePaymentApiKey } from '../../integrations/payment/validate-payment-api-key';
 
 const paymentRouter = new PaymentRouterService();
 
@@ -73,7 +74,7 @@ export class TenantPaymentSettingsService {
         active: item.active ?? true,
       };
       if (item.apiKey !== undefined && item.apiKey !== '') {
-        update.apiKey = item.apiKey;
+        update.apiKey = validatePaymentApiKey(item.provider, item.apiKey);
       }
       if (item.webhookToken !== undefined && item.webhookToken !== '') {
         update.webhookToken = item.webhookToken;

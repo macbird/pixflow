@@ -38,6 +38,9 @@ export interface PlatformSettingsDto {
 }
 
 export interface TenantSettingsDto {
+  accountSlug: string | null;
+  mercadoPagoWebhookUrl: string | null;
+  mercadoPagoWebhookRequiresToken: boolean;
   payment: {
     provider: string;
     apiKeyConfigured: boolean;
@@ -131,6 +134,7 @@ export interface InvoiceDetailDto {
   dueDate: string;
   status: string;
   pixCopyPaste: string | null;
+  pixQrCodeBase64: string | null;
   paidAt: string | null;
   paymentProvider: string | null;
   providerChargeId: string | null;
@@ -146,6 +150,8 @@ export interface InvoiceDetailDto {
   replacement: InvoiceReplacementRef | null;
   canCancel: boolean;
   canRecreate: boolean;
+  /** E.164 digits (55…) for wa.me; detail endpoint only */
+  payerPhone?: string | null;
 }
 
 export interface PaymentDetailDto {

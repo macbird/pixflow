@@ -1,6 +1,7 @@
 import { prisma } from '../../core/database';
 import type { PaymentProviderType, WhatsAppProviderType } from '@prisma/client';
 import { TenantPaymentSettingsService } from './tenant-payment-settings.service';
+import { buildMercadoPagoWebhookUrl } from './payment-webhook.util';
 
 const tenantPaymentSettings = new TenantPaymentSettingsService();
 
@@ -32,14 +33,20 @@ export class TenantSettingsService {
   }
 
   async get(tenantId: string) {
-    const [payment, whatsapp, paymentCredentials, paymentRouting] = await Promise.all([
+    const [account, payment, whatsapp, paymentCredentials, paymentRouting] = await Promise.all([
+      prisma.account.findUnique({ where: { id: tenantId }, select: { slug: true } }),
       prisma.tenantPaymentConfig.findUnique({ where: { accountId: tenantId } }),
       prisma.tenantWhatsappConfig.findUnique({ where: { accountId: tenantId } }),
       tenantPaymentSettings.listCredentials(tenantId),
       tenantPaymentSettings.listRoutingRules(tenantId),
     ]);
 
+    const mercadoPagoCredential = paymentCredentials.find((item) => item.provider === 'mercadopago');
+
     return {
+      accountSlug: account?.slug ?? null,
+      mercadoPagoWebhookUrl: account?.slug ? buildMercadoPagoWebhookUrl(account.slug) : null,
+      mercadoPagoWebhookRequiresToken: Boolean(mercadoPagoCredential?.webhookTokenConfigured),
       payment: {
         provider: payment?.provider ?? 'asaas',
         apiKeyConfigured: Boolean(payment?.apiKey),

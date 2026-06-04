@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Copy, RotateCcw, XCircle } from 'lucide-react';
+import { ArrowLeft, Copy, Loader2, MessageCircle, RotateCcw, Sparkles, XCircle } from 'lucide-react';
 import { platformBillingApi, tenantBillingApi } from '../api/billing.api';
 import { PageLayout } from '../../../shared/ui/layout/PageLayout';
 import { LoadingSpinner } from '../../../shared/ui/layout/LoadingSpinner';
@@ -12,6 +12,8 @@ import { formatCents, formatPaymentMethod } from '../../../shared/ui/billing/for
 import {
   BILLING_INVOICE_STATUS_LABELS,
   PAYMENT_PROVIDER_LABELS,
+  buildBillingChargeMessage,
+  buildWaMeUrl,
   getBillingInvoiceStatusBadgeClass,
   type BillingInvoiceStatusValue,
   type PaymentProviderValue,
@@ -24,6 +26,12 @@ interface InvoiceDetailPageProps {
 
 function toDateInputValue(iso: string) {
   return iso.slice(0, 10);
+}
+
+function pixQrImageSrc(base64: string | null | undefined): string | null {
+  if (!base64?.trim()) return null;
+  if (base64.startsWith('data:')) return base64;
+  return `data:image/png;base64,${base64}`;
 }
 
 export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant }) => {
@@ -56,6 +64,11 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: invoiceQueryKey });
     queryClient.invalidateQueries({ queryKey: listQueryKey });
+    if (variant === 'tenant') {
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['activations'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    }
   };
 
   const cancelMutation = useMutation({
@@ -99,6 +112,32 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
     },
   });
 
+  const generatePixMutation = useMutation({
+    mutationFn: () => api.generatePix(id!),
+    onSuccess: () => {
+      invalidate();
+      showToast.success('PIX gerado com sucesso');
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      showToast.error(err.response?.data?.message ?? 'Erro ao gerar PIX');
+    },
+  });
+
+  const sendChargeMutation = useMutation({
+    mutationFn: () => api.sendCharge(id!),
+    onSuccess: (data: { phoneMasked?: string }) => {
+      invalidate();
+      showToast.success(
+        data.phoneMasked
+          ? `Cobrança enviada para ${data.phoneMasked}`
+          : 'Cobrança enviada via WhatsApp',
+      );
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      showToast.error(err.response?.data?.message ?? 'Erro ao enviar cobrança');
+    },
+  });
+
   const copyPix = () => {
     if (!invoice?.pixCopyPaste) {
       showToast.error('PIX não disponível para esta fatura');
@@ -106,6 +145,25 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
     }
     navigator.clipboard.writeText(invoice.pixCopyPaste);
     showToast.success('PIX copiado!');
+  };
+
+  const openWhatsApp = () => {
+    if (!invoice?.payerPhone) {
+      showToast.error('Telefone do pagador não cadastrado');
+      return;
+    }
+    const payerName =
+      invoice.customer?.name ?? invoice.account?.name ?? 'cliente';
+    const text = buildBillingChargeMessage({
+      payerName,
+      invoice: {
+        pixCopyPaste: invoice.pixCopyPaste,
+        amountCents: invoice.amountCents,
+        billingCycleKey: invoice.billingCycleKey,
+        dueDate: invoice.dueDate,
+      },
+    });
+    window.open(buildWaMeUrl(invoice.payerPhone, text), '_blank', 'noopener,noreferrer');
   };
 
   if (isLoading) {
@@ -136,6 +194,7 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
   const statusLabel =
     BILLING_INVOICE_STATUS_LABELS[invoice.status as BillingInvoiceStatusValue] ?? invoice.status;
   const isCanceled = invoice.status === 'canceled';
+  const isPayable = !isCanceled && invoice.status !== 'paid';
 
   return (
     <PageLayout
@@ -171,21 +230,72 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
                 Emitir substituta
               </button>
             ) : null}
-            {!isCanceled && invoice.pixCopyPaste ? (
+            {isPayable && !invoice.pixCopyPaste ? (
               <button
                 type="button"
-                onClick={copyPix}
-                className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                onClick={() => generatePixMutation.mutate()}
+                disabled={generatePixMutation.isPending}
+                className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
               >
-                <Copy className="h-4 w-4" />
-                Copiar PIX
+                {generatePixMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Gerando PIX...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Gerar PIX
+                  </>
+                )}
               </button>
+            ) : null}
+            {isPayable ? (
+              <button
+                type="button"
+                onClick={() => sendChargeMutation.mutate()}
+                disabled={sendChargeMutation.isPending}
+                className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Enviar cobrança
+              </button>
+            ) : null}
+            {!isCanceled && invoice.pixCopyPaste ? (
+              <>
+                <button
+                  type="button"
+                  onClick={copyPix}
+                  className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copiar PIX
+                </button>
+                {invoice.payerPhone ? (
+                  <button
+                    type="button"
+                    onClick={openWhatsApp}
+                    className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
+                  </button>
+                ) : null}
+              </>
             ) : null}
           </div>
         </div>
       }
     >
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="relative mx-auto max-w-2xl space-y-6">
+        {generatePixMutation.isPending ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[1px]">
+            <div className="flex items-center gap-2 rounded-md border border-indigo-100 bg-white px-4 py-3 text-sm font-medium text-indigo-700 shadow-sm">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Gerando PIX...
+            </div>
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold ${getBillingInvoiceStatusBadgeClass(invoice.status as BillingInvoiceStatusValue)}`}
@@ -229,42 +339,61 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
         ) : null}
 
         <DetailSection title="Resumo">
-          <DetailGrid>
-            <DetailItem label="Valor" value={formatCents(invoice.amountCents)} />
-            <DetailItem
-              label="Vencimento"
-              value={new Date(invoice.dueDate).toLocaleDateString('pt-BR')}
-            />
-            {variant === 'admin' && invoice.account ? (
-              <DetailItem label="Conta" value={invoice.account.name} />
-            ) : null}
-            {variant === 'tenant' && invoice.customer ? (
-              <DetailItem label="Cliente" value={invoice.customer.name} />
-            ) : null}
-            {invoice.paidAt ? (
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+            <div className="min-w-0 flex-1">
+            <DetailGrid>
+              <DetailItem label="Valor" value={formatCents(invoice.amountCents)} />
               <DetailItem
-                label="Pago em"
-                value={new Date(invoice.paidAt).toLocaleString('pt-BR')}
+                label="Vencimento"
+                value={new Date(invoice.dueDate).toLocaleDateString('pt-BR')}
               />
+              {variant === 'admin' && invoice.account ? (
+                <DetailItem label="Conta" value={invoice.account.name} />
+              ) : null}
+              {variant === 'tenant' && invoice.customer ? (
+                <DetailItem label="Cliente" value={invoice.customer.name} />
+              ) : null}
+              {invoice.paidAt ? (
+                <DetailItem
+                  label="Pago em"
+                  value={new Date(invoice.paidAt).toLocaleString('pt-BR')}
+                />
+              ) : null}
+              {invoice.paymentProvider ? (
+                <DetailItem
+                  label="Provider PIX"
+                  value={
+                    PAYMENT_PROVIDER_LABELS[invoice.paymentProvider as PaymentProviderValue] ??
+                    invoice.paymentProvider
+                  }
+                />
+              ) : null}
+              <DetailItem label="ID da fatura" value={invoice.id} className="sm:col-span-2" />
+              {invoice.providerChargeId ? (
+                <DetailItem
+                  label="ID no provider"
+                  value={invoice.providerChargeId}
+                  className="sm:col-span-2"
+                />
+              ) : null}
+            </DetailGrid>
+            </div>
+            {!isCanceled && pixQrImageSrc(invoice.pixQrCodeBase64) ? (
+              <div className="flex shrink-0 flex-col items-center gap-2 sm:items-end">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  QR Code PIX
+                </span>
+                <img
+                  src={pixQrImageSrc(invoice.pixQrCodeBase64)!}
+                  alt="QR Code para pagamento PIX"
+                  className="h-40 w-40 rounded-md border border-slate-200 bg-white p-2 shadow-sm"
+                />
+                <p className="max-w-[10rem] text-center text-[11px] text-slate-500">
+                  Escaneie no app do banco
+                </p>
+              </div>
             ) : null}
-            {invoice.paymentProvider ? (
-              <DetailItem
-                label="Provider PIX"
-                value={
-                  PAYMENT_PROVIDER_LABELS[invoice.paymentProvider as PaymentProviderValue] ??
-                  invoice.paymentProvider
-                }
-              />
-            ) : null}
-            <DetailItem label="ID da fatura" value={invoice.id} className="sm:col-span-2" />
-            {invoice.providerChargeId ? (
-              <DetailItem
-                label="ID no provider"
-                value={invoice.providerChargeId}
-                className="sm:col-span-2"
-              />
-            ) : null}
-          </DetailGrid>
+          </div>
         </DetailSection>
 
         {!isCanceled && invoice.pixCopyPaste ? (

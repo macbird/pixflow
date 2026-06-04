@@ -12,7 +12,7 @@ Referência funcional: `CLIENTE-MANAGER-SPEC-TEMP.md` (§6, §12–§15).
 
 | Fase | Escopo | Este documento |
 |------|--------|----------------|
-| **1** (passos 1–3, 7 parcial) | CRUD, dashboard, UX | ✅ Concluído |
+| **1** (passos 1–3, 7) | CRUD, dashboard, UX, ativações pendentes no dashboard | ✅ Concluído (verificado 04/06/2026) |
 | **2** | Admin plataforma | Ver [02-phase-2-admin-panel.md](./02-phase-2-admin-panel.md) |
 | **2.5** | Plataforma cobra tenants (SaaS) | [10-billing-dual-layer.md](./10-billing-dual-layer.md) — **implementar antes do Passo 4 abaixo** |
 | **3** | Tenant cobra clientes (PIX, faturas) | Passos 4–6 abaixo |

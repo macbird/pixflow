@@ -10,6 +10,7 @@ import { registerTagsModule } from './modules/tags';
 import { registerDashboardModule } from './modules/dashboard';
 import { registerAdminModule } from './modules/admin';
 import { registerBillingModule } from './modules/billing';
+import { paymentWebhookRoutes } from './modules/billing/payment-webhook.routes';
 import { registerActivationsModule } from './modules/activations';
 import { tenantContextMiddleware } from './core/middleware/tenant-context';
 
@@ -68,6 +69,7 @@ const start = async () => {
     await app.register(registerDashboardModule, { prefix: '/api/dashboard' });
     await app.register(registerAdminModule, { prefix: '/api/admin' });
     await registerBillingModule(app);
+    await app.register(paymentWebhookRoutes, { prefix: '/api/webhooks' });
     await registerActivationsModule(app);
 
     const port = Number(process.env.PORT) || 3001;

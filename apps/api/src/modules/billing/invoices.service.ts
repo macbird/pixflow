@@ -1,12 +1,13 @@
 import { prisma } from '../../core/database';
 import type { BillingScope, BillingInvoiceStatus, PaymentProviderType } from '@prisma/client';
+import { normalizePhoneE164 } from '@client-manager/shared';
 import { InvoiceActionError } from './invoice-errors';
-import { PaymentRouterService } from '../../integrations/payment/payment-router.service';
+import { PaymentGenerationService } from '../../integrations/payment/payment-generation.service';
 import { PaymentConfirmationService } from './payment-confirmation.service';
 import { isInvoicePastDue, syncOverdueInvoices } from './sync-overdue-invoices';
 
 const CANCELABLE_STATUSES: BillingInvoiceStatus[] = ['draft', 'open', 'overdue'];
-const paymentRouter = new PaymentRouterService();
+const paymentGeneration = new PaymentGenerationService();
 const paymentConfirmation = new PaymentConfirmationService();
 
 export class InvoicesService {
@@ -26,6 +27,7 @@ export class InvoicesService {
     dueDate: Date;
     status: BillingInvoiceStatus;
     pixCopyPaste: string | null;
+    pixQrCodeBase64: string | null;
     paidAt: Date | null;
     paymentProvider: PaymentProviderType | null;
     providerChargeId: string | null;
@@ -34,8 +36,8 @@ export class InvoicesService {
     canceledAt: Date | null;
     cancelReason: string | null;
     replacesInvoiceId: string | null;
-    account: { id: string; name: string };
-    customer: { id: string; name: string } | null;
+    account: { id: string; name: string; phone: string | null };
+    customer: { id: string; name: string; phone: string | null } | null;
     payments: Array<{
       id: string;
       amountCents: number;
@@ -58,6 +60,7 @@ export class InvoicesService {
       dueDate: row.dueDate.toISOString(),
       status: row.status,
       pixCopyPaste: row.pixCopyPaste,
+      pixQrCodeBase64: row.pixQrCodeBase64,
       paidAt: row.paidAt?.toISOString() ?? null,
       paymentProvider: row.paymentProvider,
       providerChargeId: row.providerChargeId,
@@ -79,6 +82,7 @@ export class InvoicesService {
       replacement: row.replacement,
       canCancel,
       canRecreate,
+      payerPhone: resolvePayerPhone(row),
     };
   }
   async list(
@@ -160,8 +164,8 @@ export class InvoicesService {
     const row = await prisma.invoice.findFirst({
       where: this.invoiceWhere(scope, accountId, invoiceId),
       include: {
-        account: { select: { id: true, name: true } },
-        customer: { select: { id: true, name: true } },
+        account: { select: { id: true, name: true, phone: true } },
+        customer: { select: { id: true, name: true, phone: true } },
         payments: {
           orderBy: { paidAt: 'desc' },
           select: {
@@ -446,41 +450,11 @@ export class InvoicesService {
     }
   }
 
-  /** Stub: simulates PIX generation until PSP integration. */
-  async generatePixStub(invoiceId: string, tenantId?: string) {
-    const invoice = await prisma.invoice.findFirst({
-      where: {
-        id: invoiceId,
-        ...(tenantId ? { accountId: tenantId } : {}),
-      },
-    });
-
-    if (!invoice) {
-      throw new Error('Invoice not found');
-    }
-
-    if (invoice.status === 'canceled') {
-      throw new Error('Invoice canceled');
-    }
-
-    const paymentProvider = await paymentRouter.resolveForTenant(
-      invoice.accountId,
-      invoice.amountCents,
-    );
-
-    const fakePix = `00020126580014BR.GOV.BCB.PIX0136${invoice.id}520400005303986540${(
-      invoice.amountCents / 100
-    ).toFixed(2)}5802BR5925CLIENTE MANAGER6009SAO PAULO62070503***6304ABCD`;
-
-    return prisma.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        pixCopyPaste: fakePix,
-        paymentProvider,
-        providerChargeId: `stub_${paymentProvider}_${invoiceId}`,
-        status: invoice.status === 'draft' ? 'open' : invoice.status,
-      },
-    });
+  /**
+   * Generates PIX copia e cola via configured PSP (stub when credentials are missing).
+   */
+  async generatePayment(invoiceId: string, tenantId?: string) {
+    return paymentGeneration.generatePayment(invoiceId, tenantId);
   }
 
   async markPaidManual(
@@ -514,4 +488,14 @@ export class InvoicesService {
       throw new Error(error instanceof Error ? error.message : 'Payment confirmation failed');
     }
   }
+}
+
+function resolvePayerPhone(row: {
+  customer: { phone: string | null } | null;
+  account: { phone: string | null };
+}): string | null {
+  const raw = row.customer?.phone ?? row.account.phone;
+  if (!raw) return null;
+  const normalized = normalizePhoneE164(raw);
+  return normalized || null;
 }

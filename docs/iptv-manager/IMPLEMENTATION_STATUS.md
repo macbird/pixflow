@@ -1,8 +1,24 @@
 # Status da Implementação — Cliente Manager
 
-Documento vivo: última atualização após **documentação de pagamento híbrido** (EMV copia e cola + link InfinitePay; PushinPay; contratos `PaymentProvider.createCharge`; WhatsApp `{{payment_block}}`).
+Documento vivo: última verificação em **04/06/2026** (Fases 1 e 2 confirmadas no código; ajustes recentes em billing/UX refletidos abaixo).
 
-Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [03-integrations-pix-whatsapp.md](./03-integrations-pix-whatsapp.md) · [09-improvements-p0-p1.md](./09-improvements-p0-p1.md)
+Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [03-integrations-pix-whatsapp.md](./03-integrations-pix-whatsapp.md) · [09-improvements-p0-p1.md](./09-improvements-p0-p1.md) · [11-payment-and-activations.md](./11-payment-and-activations.md)
+
+---
+
+## Verificação Fases 1 e 2 (04/06/2026)
+
+| Critério | Fase 1 | Fase 2 |
+|----------|--------|--------|
+| **Escopo documentado** | [01-phase-1-tenant-app.md](./01-phase-1-tenant-app.md) passos 1–3 + dashboard | [02-phase-2-admin-panel.md](./02-phase-2-admin-panel.md) |
+| **Backend** | Auth tenant, plans, servers, customers, tags, dashboard, billing tenant, activations | Auth admin, tenants CRUD, dashboard admin, billing `scope=platform` |
+| **Frontend** | `/dashboard`, `/customers`, `/plans`, `/servers`, `/settings`, `/invoices`, `/payments`, `/activations` | `/admin/*` (login, dashboard, contas, faturas, pagamentos, settings, perfil) |
+| **Isolamento tenant** | `requireTenantId`, JWT com `tenantId` | Token `adminToken` separado |
+| **Conclusão** | ✅ **Entregue** para o MVP da fase | ✅ **Entregue** para o MVP da fase |
+
+**Fora do escopo estrito das Fases 1–2 (já no repo, tratadas nas fases 2.5 / 3):** faturas e pagamentos tenant, ativações pós-pagamento, cobrança SaaS admin↔tenant, PIX stub, sync de faturas vencidas.
+
+**Próximo foco do produto:** concluir integrações reais (Fase 2.5 + 3) — adapters PSP, webhooks, jobs — não reabrir Fases 1–2 salvo bugs.
 
 ---
 
@@ -37,8 +53,11 @@ Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [03-integ
 - CRUD clientes, conexões (MAC, servidor, app), cascade delete, máscara MAC hex
 
 ### Passo 7 (parcial) — Dashboard tenant
-**Status:** Concluído (KPIs básicos, vencimentos próximos, KPIs de billing)  
-- Pendente: KPI “renovações pendentes” (depende Fase 5)
+**Status:** Concluído  
+- KPIs de clientes (total, ativos, vencendo, vencidos), infraestrutura, receita estimada  
+- KPIs e gráfico de **cobrança** (recebido, em aberto, vencidas, taxa)  
+- Listas: próximos vencimentos, pagamentos recentes, **ativações pendentes** (card + lista)  
+- Pendente Fase 5: fila `/renewals` completa e KPI “renovações no servidor” pós-automação
 
 ### Ajustes de UX/UI (transversal)
 **Status:** Concluído  
@@ -85,19 +104,19 @@ Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [03-integ
 | Admin: `/admin/invoices`, `/admin/payments`, detalhes, cancelar/recriar fatura | ✅ |
 | Tenant: `/invoices`, `/payments`, detalhes, cancelar/recriar fatura | ✅ |
 | Dashboards admin + tenant com KPIs e pagamentos recentes | ✅ |
-| Pagamento stub + baixa manual (`generate-pix`, `mark-paid`) | ✅ stub (só EMV fake) |
+| `generate-pix` via adapters reais (Asaas / Mercado Pago) + baixa manual | ✅ |
 | Filtros de listagem (status, ciclo, datas) | ✅ |
 
 ### Pendente (critério de pronto)
 
 | Item | Status |
 |------|--------|
-| Adapter EMV real (Asaas) na conta plataforma | ❌ |
-| Webhook idempotente → baixa automática (`/webhooks/payment/...`) | ❌ |
+| Adapter EMV real (Asaas + Mercado Pago) na conta plataforma | ✅ |
+| Webhook Mercado Pago idempotente (`/api/webhooks/payment/:slug/mercadopago`) | ✅ (MP; Asaas webhook pendente) |
 | Job mensal automático (`billing_cycle_key`) | ❌ |
 | Suspensão automática por inadimplência | ❌ |
 | Tenant: copiar PIX da fatura SaaS em Configurações | ⚠️ parcial (via listagem/detalhe) |
-| Roteamento multi-PSP por valor (plataforma) | 📋 doc — backlog (MVP tenant primeiro) |
+| Roteamento multi-PSP por valor (plataforma) | 📋 backlog (tenant usa um PSP; plataforma idem no MVP) |
 
 **Critério de pronto:** admin gera fatura de março; tenant paga via PIX sandbox; webhook marca paga; dashboard admin mostra receita do mês.
 
@@ -112,26 +131,28 @@ Reutiliza o **mesmo motor** com `scope = tenant`.
 | Item | Status |
 |------|--------|
 | Faturas + pagamentos por tenant (API + UI) | ✅ |
-| Config PIX tenant em `/settings` (legado 1 PSP) | ✅ |
-| **Credenciais multi-PSP** (`tenant_payment_credentials`) | ✅ |
-| **`PaymentRouter`** — regras `minAmountCents` → provider | ✅ |
+| Config PIX tenant em `/settings` | ✅ |
+| **Credenciais multi-PSP** (`tenant_payment_credentials`; UI: **um PSP ativo** por vez) | ✅ |
+| **`PaymentRouter`** — regra única (`minAmountCents: 0` → provider selecionado) | ✅ |
 | Migration + `Invoice.paymentProvider` | ✅ |
-| **Settings:** meios de pagamento + escolha automática por valor + simulador | ✅ |
-| `generate-pix` (stub) persiste `paymentProvider` via router | ✅ |
+| **Settings:** um PSP via combobox + credenciais só do meio escolhido | ✅ |
+| **Fatura manual** + baixa manual / ativação pendente | ✅ |
+| **Sync** faturas `open` → `overdue` por `dueDate` | ✅ |
+| `generate-pix` via PSP real (factory + router) | ✅ |
 | Detalhe fatura: badge do provider PIX | ✅ |
 | Cancelamento + fatura substituta (histórico preservado) | ✅ |
 | Filtros em faturas/pagamentos | ✅ |
 | Testes unitários `PaymentRouterService` | ✅ |
-| Documentação roteamento por valor | ✅ |
+| Ativações pendentes (`/activations` + dashboard) | ✅ |
 
 ### Pendente
 
 | Item | Status |
 |------|--------|
-| PIX real por tenant (Asaas + PSP percentual EMV) | ❌ |
-| Webhook por tenant slug **e** provider | ❌ |
+| PIX real por tenant (Asaas + Mercado Pago EMV) | ✅ |
+| Webhook Mercado Pago por tenant slug | ✅ |
 | Faturas no detalhe do cliente | ❌ |
-| P0.3 idempotência webhook, P0.5 copiar PIX + wa.me | ❌ |
+| P0.3 idempotência webhook (MP), P0.5 copiar PIX + wa.me no detalhe fatura | ✅ (detalhe; cards listagem pendente) |
 | Job D-N automático | ❌ (Fase 4) |
 
 ---
@@ -148,7 +169,7 @@ Reutiliza o **mesmo motor** com `scope = tenant`.
 | Doc: WhatsApp `{{payment_block}}` | ✅ |
 | Migration `paymentDeliveryType`, `checkoutUrl` | ❌ |
 | `generatePayment` (alias `generate-pix`) | ❌ |
-| Adapters Asaas + Mercado Pago (EMV) | ❌ |
+| Adapters Asaas + Mercado Pago (EMV) | ✅ |
 | Adapter InfinitePay (`checkoutUrl`) | ❌ |
 | Adapter PushinPay (opcional) | ❌ |
 | UI: copiar PIX vs abrir/copiar link | ❌ |
@@ -164,7 +185,7 @@ Reutiliza o **mesmo motor** com `scope = tenant`.
 | P0.6 Telefone E.164 | ❌ Pendente |
 | P1.3 Busca global clientes (nome/tel/MAC) | ⚠️ Parcial (nome + tel; MAC pendente) |
 | P1.1–P1.2, P1.4–P1.6 | ❌ Pendente |
-| P0.3 webhook idempotente | ❌ Pendente (billing stub) |
+| P0.3 webhook idempotente (Mercado Pago) | ✅ Parcial (Asaas webhook pendente) |
 | Demais P0 (seed unificado, audit, backup) | ❌ Pendente |
 
 Ver checklist completo em [09-improvements-p0-p1.md](./09-improvements-p0-p1.md).
@@ -207,7 +228,7 @@ flowchart TD
 
 | Item | Notas |
 |------|--------|
-| Pagamento / webhook | Stub EMV-only; roteamento por valor pronto; falta híbrido + adapters reais + idempotência |
+| Pagamento / webhook | Stub EMV-only; **um PSP por tenant** (regra única `minAmountCents=0`); falta híbrido + adapters reais + idempotência |
 | Providers no código | Enum Prisma ainda só `asaas`, `efi`, `mercadopago` — doc prevê `pushinpay`, `infinitypay` |
 | Fatura cancelada na listagem | Permanece no banco; pode “sumir” em páginas seguintes (ordenar/filtrar por status) |
 | `FormLayout` legado | Admin/tenant usam `PageLayout` |
@@ -219,8 +240,8 @@ flowchart TD
 
 ## Commits recentes (referência)
 
-- *(doc)* — Pagamento híbrido: EMV + checkout link, PushinPay, InfinitePay, WhatsApp `payment_block`  
-- *(anterior)* — Roteamento PSP por valor: migration, API, UI settings, PaymentRouter, docs  
+- `8c36b15` — Settings PIX: um provider + combobox; perfil sem exibir `role`  
+- `2812876` — Billing overdue sync, modal único, dashboard ativações, UX cliente/fatura  
 - `069f110` — Núcleo billing, filtros de listagem, cancel/recriar fatura  
 - `7118ddf` — Roadmap Fase 2.5 nos guias  
 - `6f2cc16` — Admin UI, busca e paginação em contas  

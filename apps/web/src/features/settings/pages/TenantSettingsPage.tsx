@@ -143,6 +143,8 @@ export const TenantSettingsPage: React.FC = () => {
               onProviderChange={setPaymentProvider}
               credentials={credentials}
               onChange={setCredentials}
+              mercadoPagoWebhookUrl={data?.mercadoPagoWebhookUrl}
+              mercadoPagoWebhookRequiresToken={data?.mercadoPagoWebhookRequiresToken}
             />
           </div>
         </section>

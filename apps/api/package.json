@@ -9,7 +9,8 @@
     "start": "node -r dotenv/config dist/main.js",
     "test": "vitest run",
     "seed:billing": "ts-node src/scripts/seed-billing.ts",
-    "seed:activations": "ts-node src/scripts/seed-activations.ts"
+    "seed:activations": "ts-node src/scripts/seed-activations.ts",
+    "simulate:mp-webhook": "ts-node src/scripts/simulate-mercadopago-webhook.ts"
   },
   "dependencies": {
     "@client-manager/shared": "*",

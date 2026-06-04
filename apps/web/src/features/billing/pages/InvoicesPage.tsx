@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Copy, CheckCircle } from 'lucide-react';
+import { Copy, CheckCircle, Loader2 } from 'lucide-react';
 import { platformBillingApi, tenantBillingApi } from '../api/billing.api';
 import { CreateInvoiceModal } from '../components/CreateInvoiceModal';
 import { PageLayout } from '../../../shared/ui/layout/PageLayout';
@@ -78,9 +78,11 @@ export const InvoicesPage: React.FC<InvoicesPageProps> = ({ variant }) => {
     mutationFn: (id: string) => api.generatePix(id),
     onSuccess: () => {
       invalidate();
-      showToast.success('PIX gerado (simulado)');
+      showToast.success('PIX gerado com sucesso');
     },
-    onError: () => showToast.error('Erro ao gerar PIX'),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      showToast.error(err.response?.data?.message ?? 'Erro ao gerar PIX');
+    },
   });
 
   const paidMutation = useMutation({
@@ -155,9 +157,17 @@ export const InvoicesPage: React.FC<InvoicesPageProps> = ({ variant }) => {
               <button
                 type="button"
                 onClick={() => pixMutation.mutate(i.id)}
-                className="text-xs font-medium text-indigo-600 hover:underline px-1"
+                disabled={pixMutation.isPending}
+                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline px-1 disabled:opacity-60"
               >
-                PIX
+                {pixMutation.isPending && pixMutation.variables === i.id ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  'PIX'
+                )}
               </button>
               <button
                 type="button"

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Copy } from 'lucide-react';
 import {
   PAYMENT_PROVIDER_FEE_HINTS,
   PAYMENT_PROVIDER_LABELS,
@@ -6,6 +7,8 @@ import {
   type PaymentProviderValue,
   type TenantPaymentCredentialDto,
 } from '@client-manager/shared';
+import { SecretCredentialField } from './SecretCredentialField';
+import { showToast } from '../../../shared/utils/toast';
 
 export type PaymentCredentialFormState = TenantPaymentCredentialDto & {
   apiKey: string;
@@ -61,6 +64,8 @@ interface PaymentCredentialsSectionProps {
   onProviderChange: (provider: PaymentProviderValue) => void;
   credentials: PaymentCredentialFormState[];
   onChange: (credentials: PaymentCredentialFormState[]) => void;
+  mercadoPagoWebhookUrl?: string | null;
+  mercadoPagoWebhookRequiresToken?: boolean;
 }
 
 export const PaymentCredentialsSection: React.FC<PaymentCredentialsSectionProps> = ({
@@ -68,6 +73,8 @@ export const PaymentCredentialsSection: React.FC<PaymentCredentialsSectionProps>
   onProviderChange,
   credentials,
   onChange,
+  mercadoPagoWebhookUrl,
+  mercadoPagoWebhookRequiresToken = false,
 }) => {
   const selected =
     credentials.find((item) => item.provider === selectedProvider) ??
@@ -87,6 +94,12 @@ export const PaymentCredentialsSection: React.FC<PaymentCredentialsSectionProps>
   };
 
   const hint = PAYMENT_PROVIDER_FEE_HINTS[selectedProvider];
+
+  const copyWebhookUrl = () => {
+    if (!mercadoPagoWebhookUrl) return;
+    navigator.clipboard.writeText(mercadoPagoWebhookUrl);
+    showToast.success('URL do webhook copiada');
+  };
 
   return (
     <div className="space-y-5">
@@ -121,43 +134,64 @@ export const PaymentCredentialsSection: React.FC<PaymentCredentialsSectionProps>
         <p className="mt-0.5 text-xs text-slate-500">Credenciais para integração com o PIX</p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-medium text-slate-600">API Key</label>
-            <input
-              type="password"
-              value={selected.apiKey}
-              onChange={(e) => updateSelected({ apiKey: e.target.value })}
-              placeholder={
-                selected.apiKeyConfigured ? '•••••••• (deixe vazio para manter)' : 'Cole a API key'
-              }
-              className="mt-1 block w-full rounded-md border border-slate-300 p-2 font-mono text-sm shadow-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600">Token do webhook</label>
-            <input
-              type="password"
-              value={selected.webhookToken}
-              onChange={(e) => updateSelected({ webhookToken: e.target.value })}
-              placeholder={
-                selected.webhookTokenConfigured
-                  ? '•••••••• (deixe vazio para manter)'
-                  : 'Opcional'
-              }
-              className="mt-1 block w-full rounded-md border border-slate-300 p-2 font-mono text-sm shadow-sm"
-            />
-          </div>
+          <SecretCredentialField
+            id={`payment-api-key-${selectedProvider}`}
+            label="API Key / Access Token"
+            value={selected.apiKey}
+            configured={selected.apiKeyConfigured}
+            onChange={(apiKey) => updateSelected({ apiKey })}
+            emptyPlaceholder="Cole o Access Token (ex.: TEST-...)"
+            configuredHint="Access token salvo — não exibido por segurança"
+          />
+          <SecretCredentialField
+            id={`payment-webhook-${selectedProvider}`}
+            label="Token do webhook"
+            value={selected.webhookToken}
+            configured={selected.webhookTokenConfigured}
+            onChange={(webhookToken) => updateSelected({ webhookToken })}
+            emptyPlaceholder="Opcional"
+            configuredHint="Token do webhook salvo — não exibido por segurança"
+          />
         </div>
 
-        {selected.apiKeyConfigured || selected.webhookTokenConfigured ? (
-          <p className="mt-3 text-xs text-emerald-700">
-            Credenciais já configuradas. Preencha os campos apenas se quiser alterar.
-          </p>
-        ) : (
+        {selectedProvider === 'mercadopago' ? (
+          <>
+            <p className="mt-3 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+              Mercado Pago: copie o <strong>Access Token</strong> (token longo) em Developers →
+              Credenciais de teste. Não use a <strong>Public Key</strong> (UUID curto) nem o
+              usuário <code className="font-mono">TESTUSER...</code>.
+            </p>
+            {mercadoPagoWebhookUrl ? (
+              <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-3">
+                <p className="text-xs font-medium text-emerald-900">URL do webhook (PIX pago)</p>
+                <div className="mt-2 flex items-start gap-2">
+                  <code className="flex-1 break-all font-mono text-[11px] text-emerald-950">
+                    {mercadoPagoWebhookUrl}
+                    {mercadoPagoWebhookRequiresToken ? '?token=SEU_TOKEN' : ''}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyWebhookUrl}
+                    className="shrink-0 rounded p-1 text-emerald-700 hover:bg-emerald-100"
+                    title="Copiar URL"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="mt-2 text-[11px] text-emerald-800">
+                  Cadastre em Mercado Pago → Webhooks → evento <strong>Payments</strong>. Em
+                  desenvolvimento local use ngrok apontando para a API (
+                  <code className="font-mono">API_PUBLIC_BASE_URL</code>).
+                </p>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+        {!selected.apiKeyConfigured ? (
           <p className="mt-3 text-xs text-amber-700">
             Informe a API key e clique em <strong>Salvar</strong> no fim da página.
           </p>
-        )}
+        ) : null}
       </div>
     </div>
   );

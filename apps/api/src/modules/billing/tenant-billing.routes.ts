@@ -4,6 +4,7 @@ import { requireTenantId } from '../../core/middleware/require-tenant';
 import { TenantSettingsService } from './tenant-settings.service';
 import { TenantPaymentSettingsService } from './tenant-payment-settings.service';
 import { InvoicesService } from './invoices.service';
+import { InvoiceChargeService } from './invoice-charge.service';
 import { PaymentsService } from './payments.service';
 import { handleInvoiceActionError } from './invoice-route.util';
 import { pickListFilters } from '../../core/utils/parse-list-filters';
@@ -14,6 +15,7 @@ const PAYMENT_LIST_FILTER_KEYS = ['method', 'billingCycleKey', 'paidFrom', 'paid
 const tenantSettings = new TenantSettingsService();
 const tenantPaymentSettings = new TenantPaymentSettingsService();
 const invoicesService = new InvoicesService();
+const invoiceChargeService = new InvoiceChargeService();
 const paymentsService = new PaymentsService();
 
 export async function tenantBillingRoutes(app: FastifyInstance) {
@@ -189,9 +191,20 @@ export async function tenantBillingRoutes(app: FastifyInstance) {
     if (!tenantId) return;
     const { id } = request.params as { id: string };
     try {
-      return await invoicesService.generatePixStub(id, tenantId);
-    } catch {
-      return reply.status(404).send({ message: 'Invoice not found' });
+      return await invoicesService.generatePayment(id, tenantId);
+    } catch (error) {
+      return handleInvoiceActionError(reply, error);
+    }
+  });
+
+  app.post('/invoices/:id/send-charge', async (request, reply) => {
+    const tenantId = requireTenantId(request, reply);
+    if (!tenantId) return;
+    const { id } = request.params as { id: string };
+    try {
+      return await invoiceChargeService.sendChargeViaWhatsApp(id, tenantId);
+    } catch (error) {
+      return handleInvoiceActionError(reply, error);
     }
   });
 
