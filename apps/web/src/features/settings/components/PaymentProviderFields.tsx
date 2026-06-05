@@ -114,5 +114,11 @@ export const WhatsAppProviderFields: React.FC<WhatsAppProviderFieldsProps> = ({
       onChange={onApiKeyChange}
       emptyPlaceholder="Token da instância"
     />
+    <p className="text-xs text-slate-500">
+      Quando um pagamento for confirmado (webhook ou baixa), o sistema envia um aviso por WhatsApp
+      para o telefone da conta do revendedor. Em desenvolvimento, use{' '}
+      <code className="font-mono">PAYMENT_NOTIFY_PHONE</code> no <code className="font-mono">.env</code>{' '}
+      da API se o telefone da conta ainda não estiver cadastrado.
+    </p>
   </div>
 );

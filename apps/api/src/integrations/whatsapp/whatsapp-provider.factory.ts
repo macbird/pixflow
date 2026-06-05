@@ -1,6 +1,7 @@
 import type { BillingScope } from '@prisma/client';
 import { prisma } from '../../core/database';
 import { safeDecryptCredential } from '../../core/crypto/credential-crypto';
+import { parseEvolutionConnectionConfig } from './evolution-config.util';
 import { EvolutionWhatsAppProvider } from './evolution.provider';
 import type { WhatsAppProvider } from './whatsapp-provider.interface';
 
@@ -45,28 +46,13 @@ export class WhatsAppProviderFactory {
     }
 
     const apiKey = safeDecryptCredential(config.apiKey) || config.apiKey;
-    const instanceName = resolveEvolutionInstanceName(config.instanceUrl);
+    const { baseUrl, instanceName } = parseEvolutionConnectionConfig(config.instanceUrl);
 
     if (config.provider === 'evolution') {
-      return new EvolutionWhatsAppProvider(config.instanceUrl, apiKey, instanceName);
+      return new EvolutionWhatsAppProvider(baseUrl, apiKey, instanceName);
     }
 
     throw new Error(`Provider WhatsApp "${config.provider}" ainda não implementado`);
   }
 }
 
-function resolveEvolutionInstanceName(instanceUrl: string): string {
-  const fromEnv = process.env.EVOLUTION_INSTANCE_NAME?.trim();
-  if (fromEnv) return fromEnv;
-
-  try {
-    const pathname = new URL(instanceUrl).pathname.replace(/^\//, '');
-    if (pathname && !pathname.includes('/')) {
-      return pathname;
-    }
-  } catch {
-    // ignore invalid URL
-  }
-
-  return 'default';
-}

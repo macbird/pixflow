@@ -49,7 +49,17 @@ Responsabilidades **suas**:
 | Formato de entrega (EMV vs link) | adapter + `Invoice.paymentDeliveryType` |
 | Idempotência webhook | `billing` |
 | Baixa e fila renovação | `billing` → evento → `renewals` |
+| **Aviso WhatsApp ao tenant (pagamento recebido)** | `PaymentReceivedNotificationService` após `confirm` |
 | Relatório pós-pagamento | `reports` |
+
+### Notificação ao revendedor (pagamento recebido)
+
+Quando uma fatura **tenant** é baixada (webhook PSP ou pagamento manual), o sistema envia WhatsApp para o revendedor:
+
+- **Provider:** mesma instância Evolution de Configurações → WhatsApp  
+- **Destino:** telefone da conta (`Account.phone`) ou `PAYMENT_NOTIFY_PHONE` no `.env` da API (dev)  
+- **Mensagem:** cliente, valor, ciclo, forma de pagamento; ativações pendentes se houver  
+- **Resiliência:** falha no envio **não** desfaz a baixa (apenas log)
 
 **Conclusão:** “mecanismo PIX próprio” = **seu domínio + adapters plugáveis**, não substituir o Banco Central.
 

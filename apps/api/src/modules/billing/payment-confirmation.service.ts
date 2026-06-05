@@ -1,8 +1,10 @@
 import { prisma } from '../../core/database';
 import type { BillingScope } from '@prisma/client';
 import { ActivationsService } from '../activations/activations.service';
+import { PaymentReceivedNotificationService } from './payment-received-notification.service';
 
 const activationsService = new ActivationsService();
+const paymentReceivedNotification = new PaymentReceivedNotificationService();
 
 export interface ConfirmPaymentInput {
   invoiceId: string;
@@ -112,13 +114,30 @@ export class PaymentConfirmationService {
         );
       }
 
-      return {
+      const result = {
         paymentId: payment.id,
         invoiceId: invoice.id,
         activationTasksCreated: activationTasks.length,
         activationTasks,
-        idempotent: false,
+        idempotent: false as const,
       };
+
+      void paymentReceivedNotification
+        .notifyTenant({
+          invoiceId: invoice.id,
+          paymentId: payment.id,
+          method: input.method,
+          source: input.source,
+          activationTasksCreated: activationTasks.length,
+        })
+        .catch((error) => {
+          console.warn(
+            '[payment-confirmation] WhatsApp notify failed',
+            error instanceof Error ? error.message : error,
+          );
+        });
+
+      return result;
     });
   }
 }

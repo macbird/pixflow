@@ -2,6 +2,7 @@ export * from './payment-routing';
 export * from './payment-message';
 export * from './phone-e164';
 export * from './whatsapp-url';
+export * from './payment-received-notification';
 export * from './activation-enums';
 export * from './activation-types';
 export * from './enums';

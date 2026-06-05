@@ -251,8 +251,22 @@ flowchart TD
 
 ## 🚀 Próximo passo imediato
 
-1. **`AsaasPaymentProvider`** + **`MercadoPagoPaymentProvider`** (EMV).  
-2. **Webhooks** `POST /api/webhooks/payment/platform` e `/:tenantSlug/:provider` com idempotência.  
-3. Migration **`paymentDeliveryType`**, **`checkoutUrl`** + **`InfinityPayProvider`** (link).  
-4. **`payment-message.util`** + template **`{{payment_block}}`** (preparar Fase 4).  
-5. **Job BullMQ** geração mensal de faturas SaaS.
+1. ~~**`AsaasPaymentProvider`** + **`MercadoPagoPaymentProvider`** (EMV)~~ ✅  
+2. ~~**Webhooks** Mercado Pago com idempotência~~ ✅ (MP; Asaas webhook pendente)  
+3. **WhatsApp — notificação de recebimento (tenant)** ⚠️ em andamento  
+4. Migration **`paymentDeliveryType`**, **`checkoutUrl`** + **`InfinityPayProvider`** (link).  
+5. **`{{payment_block}}`** em templates de cobrança automática (Fase 4).  
+6. **Job BullMQ** geração mensal de faturas SaaS.
+
+### Plano: WhatsApp para o tenant (recebimentos)
+
+| Etapa | Entrega | Status |
+|-------|---------|--------|
+| W1 | Evolution configurável em `/settings` (URL + API key) | ✅ |
+| W2 | Enviar cobrança PIX ao **cliente** (`send-charge`) | ✅ |
+| W3 | **Aviso ao tenant** após pagamento confirmado (webhook ou manual) | ✅ código |
+| W4 | Campo **telefone de notificação** na UI (conta) | 📋 pendente |
+| W5 | Meta Cloud API (provider `meta`) | 📋 pendente |
+| W6 | Template `{{payment_block}}` em jobs D-N | 📋 Fase 4 |
+
+**W3 (implementado):** `PaymentReceivedNotificationService` dispara após `PaymentConfirmationService.confirm` (scope `tenant`). Usa telefone da **conta** ou `PAYMENT_NOTIFY_PHONE` no `.env` da API. Falha no Zap não reverte a baixa.

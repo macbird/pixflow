@@ -13,6 +13,7 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
 
   redis:
     image: redis:7-alpine
@@ -20,6 +21,31 @@ services:
     restart: always
     ports:
       - "6380:6379"
+
+  evolution-api:
+    image: atendai/evolution-api:v2.2.3
+    container_name: client-manager-evolution
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_URL: http://localhost:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-evolution-local-dev-key}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://postgres:password@postgres:5432/evolution?schema=public
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/1
+      DEL_INSTANCE: "false"
+      LOG_LEVEL: ERROR
+      # Baileys / QR (required when Manager shows empty QR or qrcode.count=0)
+      CONFIG_SESSION_PHONE_VERSION: "2.3000.1023204200"
+      WEBSOCKET_ENABLED: "true"
+      WEBSOCKET_GLOBAL_EVENTS: "true"
+      QRCODE_LIMIT: "30"
 
 volumes:
   postgres_data:

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Evolution — conectar WhatsApp (QR)</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 480px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      label {
+        display: block;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+      }
+      input {
+        width: 100%;
+        padding: 0.5rem;
+        margin-top: 0.25rem;
+        box-sizing: border-box;
+      }
+      button {
+        margin-top: 1rem;
+        padding: 0.6rem 1.2rem;
+        background: #22c55e;
+        color: #052e16;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      #status {
+        margin-top: 1rem;
+        font-size: 0.9rem;
+      }
+      #qr {
+        margin-top: 1rem;
+        background: #fff;
+        padding: 12px;
+        border-radius: 8px;
+        display: inline-block;
+      }
+      #qr img {
+        display: block;
+        max-width: 280px;
+      }
+      .hint {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        margin-top: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Conectar WhatsApp (Evolution)</h1>
+    <p class="hint">
+      Use quando o Evolution Manager não exibe o QR (erro DialogTitle no console).
+    </p>
+    <label>
+      Server URL
+      <input id="server" value="http://localhost:8080" />
+    </label>
+    <label>
+      API Key
+      <input id="apikey" value="evolution-local-dev-key" />
+    </label>
+    <label>
+      Instância (nome API, ex: torotv)
+      <input id="instance" value="torotv" />
+    </label>
+    <button type="button" id="connect">Gerar QR e conectar</button>
+    <div id="status">Aguardando…</div>
+    <div id="qr"></div>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const qrEl = document.getElementById('qr');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg;
+      }
+
+      function showQr(base64) {
+        const src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
+        qrEl.innerHTML = `<img src="${src}" alt="QR WhatsApp" />`;
+        setStatus('Escaneie o QR no WhatsApp (Aparelhos conectados). Expira em ~60s.');
+      }
+
+      document.getElementById('connect').addEventListener('click', async () => {
+        const server = document.getElementById('server').value.replace(/\/$/, '');
+        const apikey = document.getElementById('apikey').value.trim();
+        const instance = document.getElementById('instance').value.trim();
+        qrEl.innerHTML = '';
+        setStatus('Conectando…');
+
+        const socket = io(server, {
+          transports: ['websocket'],
+          extraHeaders: { apikey },
+        });
+
+        socket.on('connect', () => {
+          setStatus('Socket OK. Solicitando QR…');
+          fetch(`${server}/instance/connect/${encodeURIComponent(instance)}`, {
+            headers: { apikey },
+          }).catch(() => {});
+        });
+
+        socket.on('qrcode.updated', (payload) => {
+          const data = payload?.data || payload;
+          const b64 = data?.qrcode?.base64 || data?.base64 || data?.code;
+          if (b64) showQr(b64);
+        });
+
+        socket.on('connection.update', (payload) => {
+          const state = payload?.data?.state || payload?.state;
+          if (state === 'open') {
+            setStatus('Conectado (open). Pode fechar esta página.');
+            socket.disconnect();
+          }
+        });
+
+        socket.on('connect_error', (err) => {
+          setStatus('Erro socket: ' + (err.message || err));
+        });
+      });
+    </script>
+  </body>
+</html>
