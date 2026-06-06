@@ -23,5 +23,5 @@ jobs:
           APP_ID: ${{ secrets.SQUARE_CLOUD_APP_ID }}
         run: |
           npm install -g @squarecloud/cli
-          squarecloud auth login $SQUARE_TOKEN
+          echo "$SQUARE_TOKEN" | squarecloud auth login
           squarecloud app commit $APP_ID
