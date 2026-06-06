@@ -5,7 +5,7 @@
   "main": "src/main.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
-    "build": "tsc",
+    "build": "npx prisma generate && tsc",
     "start": "node -r dotenv/config dist/main.js",
     "start:ts": "ts-node --transpile-only -r dotenv/config src/main.ts",
     "test": "vitest run",
