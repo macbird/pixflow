@@ -5,6 +5,7 @@ import { InvoiceActionError } from './invoice-errors';
 import { PaymentGenerationService } from '../../integrations/payment/payment-generation.service';
 import { PaymentConfirmationService } from './payment-confirmation.service';
 import { isInvoicePastDue, syncOverdueInvoices } from './sync-overdue-invoices';
+import { compareInvoicesByStatusThenDueDate } from './invoice-list-order.util';
 
 const CANCELABLE_STATUSES: BillingInvoiceStatus[] = ['draft', 'open', 'overdue'];
 const paymentGeneration = new PaymentGenerationService();
@@ -128,21 +129,37 @@ export class InvoicesService {
         : {}),
     };
 
-    const [rows, total] = await Promise.all([
+    const [sortKeys, total] = await Promise.all([
       prisma.invoice.findMany({
         where,
-        orderBy: { dueDate: 'desc' },
-        skip,
-        take: pageSize,
-        include: {
-          account: { select: { id: true, name: true, phone: true } },
-          customer: { select: { id: true, name: true, phone: true } },
-        },
+        select: { id: true, status: true, dueDate: true },
       }),
       prisma.invoice.count({ where }),
     ]);
 
-    const data = rows.map((row) => ({
+    const pageIds = sortKeys
+      .sort(compareInvoicesByStatusThenDueDate)
+      .slice(skip, skip + pageSize)
+      .map((row) => row.id);
+
+    if (pageIds.length === 0) {
+      return { data: [], total };
+    }
+
+    const rows = await prisma.invoice.findMany({
+      where: { id: { in: pageIds } },
+      include: {
+        account: { select: { id: true, name: true, phone: true } },
+        customer: { select: { id: true, name: true, phone: true } },
+      },
+    });
+
+    const rowsById = new Map(rows.map((row) => [row.id, row]));
+    const orderedRows = pageIds
+      .map((id) => rowsById.get(id))
+      .filter((row): row is NonNullable<typeof row> => row !== undefined);
+
+    const data = orderedRows.map((row) => ({
       id: row.id,
       scope: row.scope,
       billingCycleKey: row.billingCycleKey,

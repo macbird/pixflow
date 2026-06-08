@@ -15,6 +15,7 @@ import { registerBillingModule } from './modules/billing';
 import { paymentWebhookRoutes } from './modules/billing/payment-webhook.routes';
 import { registerActivationsModule } from './modules/activations';
 import { tenantContextMiddleware } from './core/middleware/tenant-context';
+import { prisma } from './core/database';
 
 const app = Fastify({
   logger: true,
@@ -62,6 +63,19 @@ const start = async () => {
       return { status: 'ok' };
     });
 
+    app.get('/health/db', async () => {
+      try {
+        const users = await prisma.accountUser.count();
+        const maskedUrl = (process.env.DATABASE_URL || '').replace(/:([^:@/]+)@/, ':***@');
+        return { ok: true, users, nodeEnv: process.env.NODE_ENV, databaseUrl: maskedUrl };
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : String(error),
+        };
+      }
+    });
+
     // Register modules
     await app.register(registerAuthModule, { prefix: '/api/auth' });
     await app.register(registerPlansModule, { prefix: '/api/plans' });
@@ -91,11 +105,16 @@ const start = async () => {
       reply.sendFile('index.html');
     });
 
-    const port = Number(process.env.PORT) || 3001;
+    const port = process.env.NODE_ENV === 'production' ? 80 : (Number(process.env.PORT) || 3001);
 
     await app.listen({ port, host: '0.0.0.0' });
     console.log('Registered routes:', app.printRoutes());
     console.log(`Server listening on port ${port}`);
+
+    const { bootstrapProductionDataIfEmpty } = await import('./bootstrap-production-data.js');
+    void bootstrapProductionDataIfEmpty().catch((error: unknown) => {
+      console.error('[bootstrap] failed after startup', error);
+    });
   } catch (err) {
     app.log.error(err);
     process.exit(1);

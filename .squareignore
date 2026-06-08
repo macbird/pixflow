@@ -1,4 +1,3 @@
-node_modules
 .git
 .github
 deploy
@@ -7,4 +6,13 @@ screenshot
 *.png
 *.webp
 *.log
-**/node_modules
+remote_*.sh
+macbird_*.sh
+ssh_remote.sh
+tmp_*.sh
+*.zip
+apps/api/.env
+apps/api/.env.production
+**/.env
+**/.env.*
+!**/.env.example

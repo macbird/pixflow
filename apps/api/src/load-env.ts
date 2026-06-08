@@ -4,6 +4,6 @@ import path from 'node:path';
 
 const envPath = path.resolve(__dirname, '../.env');
 
-if (existsSync(envPath)) {
-  config({ path: envPath, override: true });
+if (process.env.NODE_ENV !== 'production' && existsSync(envPath)) {
+  config({ path: envPath, override: false });
 }

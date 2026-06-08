@@ -1,5 +1,7 @@
 node_modules
 .env
+start-prod.sh
+client.p12
 deploy/CREDENTIALS.local.md
 deploy/artifacts/
 deploy/backups/

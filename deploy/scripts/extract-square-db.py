@@ -54,6 +54,12 @@ def main() -> int:
                 str(crt_path),
                 "-password",
                 f"pass:{p12_password}",
+                "-certpbe",
+                "AES-256-CBC",
+                "-keypbe",
+                "AES-256-CBC",
+                "-macalg",
+                "SHA256",
             ],
             check=True,
         )
