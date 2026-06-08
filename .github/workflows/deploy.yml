@@ -27,9 +27,8 @@ jobs:
 
       - name: Prepare Square Cloud deploy artifacts
         env:
-          SQUARE_CLOUD_API_TOKEN: ${{ secrets.SQUARE_CLOUD_API_TOKEN }}
-          SQUARE_CLOUD_DATABASE_ID: ${{ secrets.SQUARE_CLOUD_DATABASE_ID }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLIENT_P12_BASE64: ${{ secrets.CLIENT_P12_BASE64 }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           CREDENTIALS_ENCRYPTION_KEY: ${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
           API_PUBLIC_BASE_URL: ${{ env.API_PUBLIC_BASE_URL }}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prepares Square Cloud deploy artifacts: client.p12, DATABASE_URL, start-prod.sh
+# Prepares Square Cloud deploy artifacts from GitHub secrets (no API calls).
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -13,31 +13,28 @@ require_env() {
   fi
 }
 
-require_env SQUARE_CLOUD_API_TOKEN
-require_env SQUARE_CLOUD_DATABASE_ID
 require_env DATABASE_URL
+require_env CLIENT_P12_BASE64
 require_env JWT_SECRET
 
 API_PUBLIC_BASE_URL="${API_PUBLIC_BASE_URL:-https://pixflow.squareweb.app}"
 CRED_KEY="${CREDENTIALS_ENCRYPTION_KEY:-$JWT_SECRET}"
 P12_PASSWORD="${SQUARE_CLOUD_P12_PASSWORD:-squarecloud}"
 P12_PATH="${SQUARE_CLOUD_P12_PATH:-/application/client.p12}"
-CERT_JSON="$(mktemp)"
-trap 'rm -f "$CERT_JSON"' EXIT
 
-echo "==> Fetching database certificate from Square Cloud API"
-HTTP_CODE="$(curl -sS -m 30 -o "$CERT_JSON" -w "%{http_code}" \
-  -H "Authorization: ${SQUARE_CLOUD_API_TOKEN}" \
-  "https://api.squarecloud.app/v2/databases/${SQUARE_CLOUD_DATABASE_ID}/credentials/certificate")"
-if [ "$HTTP_CODE" != "200" ]; then
-  echo "::error::Certificate API returned HTTP ${HTTP_CODE}" >&2
-  cat "$CERT_JSON" >&2 || true
+echo "==> Decoding client.p12 from CLIENT_P12_BASE64"
+if ! echo "$CLIENT_P12_BASE64" | base64 -d > client.p12; then
+  echo "::error::CLIENT_P12_BASE64 is not valid base64" >&2
+  exit 1
+fi
+chmod 600 client.p12
+
+if [ ! -s client.p12 ]; then
+  echo "::error::Decoded client.p12 is empty" >&2
   exit 1
 fi
 
-python3 deploy/scripts/build-squarecloud-p12.py "$CERT_JSON" client.p12
-
-echo "==> Building production DATABASE_URL"
+echo "==> Normalizing DATABASE_URL for production"
 export P12_PATH P12_PASSWORD
 PRODUCTION_DATABASE_URL="$(python3 <<PY
 import os
@@ -47,6 +44,9 @@ raw = os.environ["DATABASE_URL"].strip()
 p12_path = os.environ["P12_PATH"]
 p12_password = os.environ["P12_PASSWORD"]
 parsed = urlparse(raw)
+
+if not parsed.hostname:
+    raise SystemExit("DATABASE_URL is missing hostname")
 
 query = dict(parse_qsl(parsed.query, keep_blank_values=True))
 query.pop("sslidentity", None)
@@ -75,7 +75,5 @@ exec node apps/api/dist/main.js
 EOF
 chmod +x start-prod.sh
 
-echo "==> Deploy artifacts ready"
-echo "  - client.p12"
-echo "  - start-prod.sh"
-echo "  - DATABASE_URL host: $(python3 -c "from urllib.parse import urlparse; print(urlparse('''${PRODUCTION_DATABASE_URL}''').hostname)")"
+echo "==> Deploy artifacts ready (client.p12 + start-prod.sh)"
+echo "  DATABASE_URL host: $(python3 -c "from urllib.parse import urlparse; print(urlparse('''${PRODUCTION_DATABASE_URL}''').hostname)")"
