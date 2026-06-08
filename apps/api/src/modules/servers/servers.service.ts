@@ -120,6 +120,8 @@ export class ServersService {
     const created = await prisma.server.create({
       data: {
         ...serverData,
+        name: input.name,
+        panelUrl: input.panelUrl,
         tenantId,
         tags: tagIds?.length
           ? {
@@ -129,7 +131,7 @@ export class ServersService {
       },
       include: { tags: true },
     });
-    return mapServerForDetail(created);
+    return mapServerForDetail({ ...created, tags: created.tags || [] });
   }
 
   async update(tenantId: string, id: string, input: ServerWriteInput) {

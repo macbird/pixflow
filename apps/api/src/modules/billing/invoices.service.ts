@@ -135,8 +135,8 @@ export class InvoicesService {
         skip,
         take: pageSize,
         include: {
-          account: { select: { id: true, name: true } },
-          customer: { select: { id: true, name: true } },
+          account: { select: { id: true, name: true, phone: true } },
+          customer: { select: { id: true, name: true, phone: true } },
         },
       }),
       prisma.invoice.count({ where }),
@@ -228,8 +228,8 @@ export class InvoicesService {
         providerChargeId: null,
       },
       include: {
-        account: { select: { id: true, name: true } },
-        customer: { select: { id: true, name: true } },
+        account: { select: { id: true, name: true, phone: true } },
+        customer: { select: { id: true, name: true, phone: true } },
         payments: true,
         replacesInvoice: { select: { id: true, status: true } },
         replacement: { select: { id: true, status: true, amountCents: true } },
@@ -298,8 +298,8 @@ export class InvoicesService {
           replacesInvoiceId: source.id,
         },
         include: {
-          account: { select: { id: true, name: true } },
-          customer: { select: { id: true, name: true } },
+          account: { select: { id: true, name: true, phone: true } },
+          customer: { select: { id: true, name: true, phone: true } },
           payments: true,
           replacesInvoice: { select: { id: true, status: true } },
           replacement: { select: { id: true, status: true, amountCents: true } },
@@ -350,8 +350,8 @@ export class InvoicesService {
         status: 'open',
       },
       include: {
-        account: { select: { id: true, name: true } },
-        customer: { select: { id: true, name: true } },
+        account: { select: { id: true, name: true, phone: true } },
+        customer: { select: { id: true, name: true, phone: true } },
         payments: true,
         replacesInvoice: { select: { id: true, status: true } },
         replacement: { select: { id: true, status: true, amountCents: true } },

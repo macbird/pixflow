@@ -31,7 +31,7 @@ export class PaymentRouterService {
 
     return rows.map((row) => ({
       minAmountCents: row.minAmountCents,
-      provider: row.provider,
+      provider: row.provider as any,
       active: row.active,
     }));
   }

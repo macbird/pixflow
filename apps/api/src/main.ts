@@ -1,7 +1,9 @@
 import './load-env';
+import path from 'path';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import fastifyStatic from '@fastify/static';
 import { registerAuthModule } from './modules/auth';
 import { registerPlansModule } from './modules/plans';
 import { registerServersModule } from './modules/servers';
@@ -71,6 +73,23 @@ const start = async () => {
     await registerBillingModule(app);
     await app.register(paymentWebhookRoutes, { prefix: '/api/webhooks' });
     await registerActivationsModule(app);
+
+    // Serve static files (Frontend)
+    const webDistPath = path.join(process.cwd(), 'apps/web/dist');
+    await app.register(fastifyStatic, {
+      root: webDistPath,
+      prefix: '/',
+      wildcard: false,
+    });
+
+    // Handle SPA routing
+    app.setNotFoundHandler((request, reply) => {
+      if (request.url.startsWith('/api')) {
+        reply.code(404).send({ error: 'Not Found' });
+        return;
+      }
+      reply.sendFile('index.html');
+    });
 
     const port = Number(process.env.PORT) || 3001;
 
