@@ -1,0 +1,10 @@
+node_modules
+.git
+.github
+deploy
+docs
+screenshot
+*.png
+*.webp
+*.log
+**/node_modules
