@@ -62,15 +62,31 @@ PY
 )"
 
 echo "==> Writing start-prod.sh"
-cat > start-prod.sh <<EOF
+cat > start-prod.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-export PORT="\${PORT:-80}"
-export NODE_ENV="\${NODE_ENV:-production}"
+export PORT="${PORT:-80}"
+export NODE_ENV="${NODE_ENV:-production}"
+EOF
+cat >> start-prod.sh <<EOF
 export DATABASE_URL="\${DATABASE_URL:-${PRODUCTION_DATABASE_URL}}"
 export JWT_SECRET="\${JWT_SECRET:-${JWT_SECRET}}"
 export CREDENTIALS_ENCRYPTION_KEY="\${CREDENTIALS_ENCRYPTION_KEY:-${CRED_KEY}}"
 export API_PUBLIC_BASE_URL="\${API_PUBLIC_BASE_URL:-${API_PUBLIC_BASE_URL}}"
+EOF
+cat >> start-prod.sh <<'EOF'
+
+echo "==> Install production dependencies"
+if [ -f package-lock.json ]; then
+  npm ci --omit=dev --ignore-scripts
+else
+  npm install --omit=dev --ignore-scripts
+fi
+
+echo "==> Prisma generate"
+npx prisma generate --schema apps/api/prisma/schema.prisma
+
+echo "==> Start API"
 exec node apps/api/dist/main.js
 EOF
 chmod +x start-prod.sh

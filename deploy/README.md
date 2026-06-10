@@ -14,7 +14,26 @@ cd ~/client-manager
 # já configurados no ambiente de produção
 ```
 
-## Deploy completo
+## Square Cloud (GitHub Actions)
+
+Push em `main` dispara `.github/workflows/deploy.yml`:
+
+1. **Build** no runner
+2. **`prisma migrate deploy`** no CI (antes do restart — app antigo continua no ar)
+3. **`squarecloud app commit --restart`**
+4. **Health gate** com retries (~5 min)
+5. **Rollback automático** para o commit anterior se o health falhar
+
+O `start-prod.sh` roda `npm ci --omit=dev` no boot (corrige deps como `node-cron`).
+
+Diagnóstico na macbird:
+
+```bash
+squarecloud app status 09455ba819f445af9c92a3d8319e26b4
+squarecloud app logs 09455ba819f445af9c92a3d8319e26b4 | tail -80
+```
+
+## Deploy completo (macbird local)
 
 Conecte no MACBIRD (SSH ou console local) e execute:
 
