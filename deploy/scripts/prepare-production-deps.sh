@@ -8,6 +8,15 @@ cd "$ROOT_DIR"
 echo "==> Prune dev dependencies"
 npm prune --omit=dev
 
+echo "==> Prisma generate (required in bundled node_modules)"
+npx prisma generate --schema apps/api/prisma/schema.prisma
+
+if [ ! -f node_modules/.prisma/client/index.js ] && [ ! -f node_modules/.prisma/client/default.js ]; then
+  echo "::error::Prisma client missing at node_modules/.prisma/client after generate" >&2
+  exit 1
+fi
+echo "Prisma client OK"
+
 find_argon2_binding() {
   find node_modules/argon2 -name 'argon2.node' -print -quit 2>/dev/null || true
 }

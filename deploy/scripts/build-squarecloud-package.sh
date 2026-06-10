@@ -33,6 +33,12 @@ if [ -z "${ARGON2_NODE}" ]; then
 fi
 echo "Using argon2 binding: ${ARGON2_NODE}"
 
+if [ ! -f node_modules/.prisma/client/default.js ] && [ ! -f node_modules/.prisma/client/index.js ]; then
+  echo "::error::Missing generated Prisma client in node_modules/.prisma/client" >&2
+  exit 1
+fi
+echo "Prisma client bundle OK"
+
 mkdir -p deploy/artifacts
 rm -rf "$PKG_DIR" "$ZIP"
 mkdir -p "$PKG_DIR"
@@ -45,8 +51,18 @@ if ! grep -q '^MEMORY=512' "$PKG_DIR/squarecloud.app"; then
   exit 1
 fi
 
-echo "==> Copying production node_modules"
-rsync -a node_modules "$PKG_DIR/"
+echo "==> Copying production node_modules (slim — no Prisma CLI / dev tools)"
+rsync -a \
+  --exclude 'node_modules/prisma/' \
+  --exclude 'typescript/' \
+  --exclude 'vitest/' \
+  --exclude '@types/' \
+  --exclude '*.map' \
+  --exclude '*/test/*' \
+  --exclude '*/tests/*' \
+  --exclude '.cache/' \
+  --exclude 'coverage/' \
+  node_modules "$PKG_DIR/"
 
 echo "==> Copying packages/shared"
 mkdir -p "$PKG_DIR/packages/shared"
@@ -71,9 +87,10 @@ echo "==> Creating zip"
 
 ls -lh "$ZIP"
 ZIP_MB="$(du -m "$ZIP" | awk '{print $1}')"
-echo "zip size: ${ZIP_MB}MB"
-if [ "${ZIP_MB}" -gt 100 ]; then
-  echo "::error::Package is ${ZIP_MB}MB — exceeds 100MB Square Cloud upload limit" >&2
+ZIP_BYTES="$(wc -c < "$ZIP" | tr -d ' ')"
+echo "zip size: ${ZIP_MB}MB (${ZIP_BYTES} bytes)"
+if [ "${ZIP_MB}" -ge 95 ]; then
+  echo "::error::Package is ${ZIP_MB}MB — Square Cloud commit limit is ~100MB; slim the bundle further" >&2
   exit 1
 fi
 du -sh "$PKG_DIR/node_modules" | awk '{print "node_modules in package:", $1}'
@@ -86,7 +103,8 @@ for required in \
   start-prod.sh \
   client.p12 \
   apps/api/dist/main.js \
-  apps/web/dist/index.html; do
+  apps/web/dist/index.html \
+  node_modules/.prisma/client/default.js; do
   if ! grep -Fq "$required" "$ZIP_LIST"; then
     echo "::error::Missing ${required} in zip" >&2
     exit 1
