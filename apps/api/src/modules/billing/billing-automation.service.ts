@@ -1,11 +1,14 @@
+import type { AutomationChargeReportEntry } from '@client-manager/shared';
 import { prisma } from '../../core/database';
 import { billingCycleKeyFromDate } from './account-billing.util';
 import { isInvoicePastDue, startOfUtcDay } from './sync-overdue-invoices';
+import { BillingAutomationReportService } from './billing-automation-report.service';
 import { InvoiceChargeService } from './invoice-charge.service';
 import { TenantBillingAutomationService } from './tenant-billing-automation.service';
 
 const invoiceChargeService = new InvoiceChargeService();
 const tenantBillingAutomationService = new TenantBillingAutomationService();
+const billingAutomationReportService = new BillingAutomationReportService();
 
 export interface BillingAutomationRunSummary {
   tenantsProcessed: number;
@@ -14,6 +17,7 @@ export interface BillingAutomationRunSummary {
   chargesSent: number;
   chargesSkipped: number;
   invoicesAutoClosed: number;
+  tenantReportsSent: number;
   errors: string[];
 }
 
@@ -38,6 +42,7 @@ export class BillingAutomationService {
       chargesSent: 0,
       chargesSkipped: 0,
       invoicesAutoClosed: 0,
+      tenantReportsSent: 0,
       errors: [],
     };
 
@@ -58,6 +63,7 @@ export class BillingAutomationService {
         summary.chargesSent += tenantSummary.chargesSent;
         summary.chargesSkipped += tenantSummary.chargesSkipped;
         summary.invoicesAutoClosed += tenantSummary.invoicesAutoClosed;
+        summary.tenantReportsSent += tenantSummary.tenantReportsSent;
         summary.errors.push(...tenantSummary.errors);
       } catch (error) {
         summary.errors.push(
@@ -80,8 +86,12 @@ export class BillingAutomationService {
       chargesSent: 0,
       chargesSkipped: 0,
       invoicesAutoClosed: 0,
+      tenantReportsSent: 0,
       errors: [],
     };
+
+    const sentCharges: AutomationChargeReportEntry[] = [];
+    const runStartedAt = new Date();
 
     const config = await tenantBillingAutomationService.ensureRow(accountId);
     if (!config.active) {
@@ -168,12 +178,42 @@ export class BillingAutomationService {
           continue;
         }
 
-        await invoiceChargeService.sendChargeViaWhatsApp(invoice.id, accountId, 'automation');
+        const delivery = await invoiceChargeService.sendChargeViaWhatsApp(
+          invoice.id,
+          accountId,
+          'automation',
+        );
         summary.chargesSent += 1;
+        sentCharges.push({
+          customerName: customer.name,
+          phoneMasked: delivery.phoneMasked ?? maskCustomerPhone(customer.phone),
+          billingCycleKey: invoice.billingCycleKey,
+          amountCents: invoice.amountCents,
+          dueDate: invoice.dueDate,
+          messagesCount: delivery.messagesCount,
+        });
       } catch (error) {
         summary.errors.push(
           `customer ${customer.id}: ${error instanceof Error ? error.message : String(error)}`,
         );
+      }
+    }
+
+    if (config.sendWhatsapp) {
+      const reportResult = await billingAutomationReportService.sendTenantRunReport({
+        accountId,
+        charges: sentCharges,
+        customersScanned: summary.customersScanned,
+        chargesSkipped: summary.chargesSkipped,
+        invoicesCreated: summary.invoicesCreated,
+        errorsCount: summary.errors.length,
+        runAt: runStartedAt,
+      });
+
+      if (reportResult.sent) {
+        summary.tenantReportsSent += 1;
+      } else if (reportResult.skipped) {
+        summary.errors.push(`tenant report: ${reportResult.skipped}`);
       }
     }
 
@@ -223,4 +263,11 @@ function addUtcDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setUTCDate(result.getUTCDate() + days);
   return result;
+}
+
+function maskCustomerPhone(phone: string | null | undefined): string {
+  if (!phone?.trim()) return 'sem telefone';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length <= 4) return '****';
+  return `${digits.slice(0, 4)}****${digits.slice(-2)}`;
 }

@@ -74,6 +74,7 @@ async function runScheduledTick(config: BillingSchedulerConfig): Promise<void> {
       summary.tenantsProcessed > 0 ||
       summary.invoicesCreated > 0 ||
       summary.chargesSent > 0 ||
+      summary.tenantReportsSent > 0 ||
       summary.invoicesAutoClosed > 0 ||
       summary.errors.length > 0
     ) {

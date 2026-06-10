@@ -13,6 +13,7 @@ export * from './enums';
 export * from './billing-enums';
 export * from './billing-schemas';
 export * from './billing-automation';
+export * from './billing-automation-report';
 export * from './schemas';
 export * from './customer-status';
 export * from './entity-lifecycle';

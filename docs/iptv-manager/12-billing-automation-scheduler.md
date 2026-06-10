@@ -17,6 +17,8 @@ Por tenant com automação **ativa** (`TenantBillingAutomationConfig.active = tr
 
 Logs de execução: tabela `billing_job_runs`. Envios: `invoice_charge_deliveries`.
 
+Após cada execução por tenant (com **Enviar WhatsApp** ativo), a API envia um **relatório WhatsApp para o telefone do tenant** (`accounts.phone`) listando todas as cobranças automáticas enviadas naquele tick, com resumo de clientes na janela, faturas criadas e ignoradas.
+
 ---
 
 ## Scheduler — quando roda

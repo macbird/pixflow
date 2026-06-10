@@ -54,9 +54,18 @@ jobs:
       - name: Verify deploy
         run: |
           set -euo pipefail
-          echo "Waiting for app startup..."
-          sleep 45
-          curl -fsS --max-time 30 "${API_PUBLIC_BASE_URL}/health"
-          DB_HEALTH="$(curl -fsS --max-time 30 "${API_PUBLIC_BASE_URL}/health/db")"
-          echo "$DB_HEALTH"
-          echo "$DB_HEALTH" | grep -q '"ok":true'
+          echo "Waiting for app startup (Prisma migrate on boot may take a few minutes)..."
+          for attempt in $(seq 1 20); do
+            if curl -fsS --max-time 25 "${API_PUBLIC_BASE_URL}/health" >/dev/null 2>&1; then
+              echo "Health OK on attempt ${attempt}"
+              DB_HEALTH="$(curl -fsS --max-time 25 "${API_PUBLIC_BASE_URL}/health/db")"
+              echo "$DB_HEALTH"
+              echo "$DB_HEALTH" | grep -q '"ok":true'
+              exit 0
+            fi
+            echo "Attempt ${attempt}/20: API not ready yet, sleeping 15s..."
+            sleep 15
+          done
+          echo "::error::Health check failed after 20 attempts (~5 min)"
+          curl -v --max-time 25 "${API_PUBLIC_BASE_URL}/health" || true
+          exit 1
