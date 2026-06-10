@@ -52,7 +52,12 @@ export class MercadoPagoPaymentProvider implements PaymentProvider {
   async createCharge(input: CreateChargeInput): Promise<PaymentChargeResult> {
     const sandbox = await this.isSandboxAccount();
     const amount = (input.amountCents / 100).toFixed(2);
-    const email = resolveMercadoPagoPayerEmail(input.invoiceId, input.payerEmail, sandbox);
+    const email = resolveMercadoPagoPayerEmail(
+      input.invoiceId,
+      input.payerEmail,
+      sandbox,
+      input.payerPhone,
+    );
 
     const body = {
       type: 'online',

@@ -55,7 +55,7 @@ report_failure() {
   exit 1
 }
 
-ZIP_BYTES="$(wc -c < "$ZIP" | tr -c '0-9' '')"
+ZIP_BYTES="$(wc -c < "$ZIP" | tr -d ' \n')"
 echo "Committing ${ZIP} (${ZIP_BYTES} bytes) to app ${APP_ID}"
 echo "squarecloud.app:"
 unzip -p "$ZIP" squarecloud.app
