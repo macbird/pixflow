@@ -113,11 +113,20 @@ else
   echo "::warning::Pre-deploy health check failed — app may already be down"
 fi
 
-echo "==> Apply database migrations before restart"
-npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
-
-echo "==> Prepare Square Cloud runtime files"
+echo "==> Prepare Square Cloud runtime files (client.p12 + start-prod.sh)"
 bash deploy/scripts/prepare-squarecloud-deploy.sh
+
+echo "==> Apply database migrations before restart (local client.p12 for CI)"
+if [ ! -f .ci-migrate-database-url ]; then
+  echo "::error::Missing .ci-migrate-database-url from prepare-squarecloud-deploy.sh" >&2
+  exit 1
+fi
+CI_DATABASE_URL="$(cat .ci-migrate-database-url)"
+DATABASE_URL="${CI_DATABASE_URL}" npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+
+echo "==> Bundle production dependencies for Square Cloud (no npm install on boot)"
+npm install --omit=dev
+npx prisma generate --schema apps/api/prisma/schema.prisma
 
 echo "==> Square Cloud login"
 npm install -g @squarecloud/cli

@@ -20,23 +20,12 @@ require_env JWT_SECRET
 API_PUBLIC_BASE_URL="${API_PUBLIC_BASE_URL:-https://pixflow.squareweb.app}"
 CRED_KEY="${CREDENTIALS_ENCRYPTION_KEY:-$JWT_SECRET}"
 P12_PASSWORD="${SQUARE_CLOUD_P12_PASSWORD:-squarecloud}"
-P12_PATH="${SQUARE_CLOUD_P12_PATH:-/application/client.p12}"
+P12_PATH_PROD="${SQUARE_CLOUD_P12_PATH:-/application/client.p12}"
+P12_PATH_CI="${ROOT_DIR}/client.p12"
 
-echo "==> Decoding client.p12 from CLIENT_P12_BASE64"
-if ! echo "$CLIENT_P12_BASE64" | base64 -d > client.p12; then
-  echo "::error::CLIENT_P12_BASE64 is not valid base64" >&2
-  exit 1
-fi
-chmod 600 client.p12
-
-if [ ! -s client.p12 ]; then
-  echo "::error::Decoded client.p12 is empty" >&2
-  exit 1
-fi
-
-echo "==> Normalizing DATABASE_URL for production"
-export P12_PATH P12_PASSWORD
-PRODUCTION_DATABASE_URL="$(python3 <<PY
+build_database_url() {
+  local p12_path="$1"
+  P12_PATH="$p12_path" P12_PASSWORD="$P12_PASSWORD" python3 <<'PY'
 import os
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
@@ -59,7 +48,23 @@ query.setdefault("schema", "public")
 
 print(urlunparse(parsed._replace(query=urlencode(query))))
 PY
-)"
+}
+
+echo "==> Decoding client.p12 from CLIENT_P12_BASE64"
+if ! echo "$CLIENT_P12_BASE64" | base64 -d > client.p12; then
+  echo "::error::CLIENT_P12_BASE64 is not valid base64" >&2
+  exit 1
+fi
+chmod 600 client.p12
+
+if [ ! -s client.p12 ]; then
+  echo "::error::Decoded client.p12 is empty" >&2
+  exit 1
+fi
+
+echo "==> Normalizing DATABASE_URL (CI migrate + production boot)"
+CI_DATABASE_URL="$(build_database_url "${P12_PATH_CI}")"
+PRODUCTION_DATABASE_URL="$(build_database_url "${P12_PATH_PROD}")"
 
 DEPLOY_GIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
 DEPLOY_GIT_SHA_SHORT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
@@ -82,16 +87,14 @@ export DEPLOYED_AT="${DEPLOYED_AT}"
 EOF
 cat >> start-prod.sh <<'EOF'
 
-echo "==> Install production dependencies (prisma postinstall required)"
-npm install --omit=dev
-
-echo "==> Prisma generate"
-npx prisma generate --schema apps/api/prisma/schema.prisma
-
-echo "==> Start API"
+echo "==> Start API (production deps bundled at deploy time)"
 exec node apps/api/dist/main.js
 EOF
 chmod +x start-prod.sh
 
+printf '%s\n' "${CI_DATABASE_URL}" > .ci-migrate-database-url
+
 echo "==> Deploy artifacts ready (client.p12 + start-prod.sh)"
+echo "  CI migrate p12: ${P12_PATH_CI}"
+echo "  Production p12: ${P12_PATH_PROD}"
 echo "  DATABASE_URL host: $(python3 -c "from urllib.parse import urlparse; print(urlparse('''${PRODUCTION_DATABASE_URL}''').hostname)")"

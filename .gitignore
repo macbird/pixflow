@@ -1,4 +1,5 @@
 node_modules
+.ci-migrate-database-url
 .env
 start-prod.sh
 client.p12

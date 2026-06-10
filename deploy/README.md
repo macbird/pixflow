@@ -25,7 +25,7 @@ Push em `main` dispara `.github/workflows/deploy.yml`:
 5. **Confirmação de versão** — `/health` retorna `gitSha`; o workflow **falha** se não bater com o commit deployado
 6. **Sem rollback automático** — falha fica visível no Actions; rollback é manual se necessário
 
-O `start-prod.sh` roda `npm ci --omit=dev` no boot (corrige deps como `node-cron`).
+O CI roda `npm install --omit=dev` + `prisma generate` e envia `node_modules` no commit (`.squareignore` inclui deps). O `start-prod.sh` só executa `node apps/api/dist/main.js`.
 
 Diagnóstico na macbird:
 
