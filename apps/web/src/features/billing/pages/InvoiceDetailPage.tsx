@@ -14,14 +14,13 @@ import {
   BILLING_INVOICE_STATUS_LABELS,
   INVOICE_KIND_LABELS,
   PAYMENT_PROVIDER_LABELS,
-  buildBillingChargeMessage,
-  buildWaMeUrl,
   getBillingInvoiceStatusBadgeClass,
   isPayableInvoiceStatus,
   type BillingInvoiceStatusValue,
+  type ChargeMessageSettingsDto,
+  type ChargeMessageTemplateContext,
   type InvoiceKindValue,
   type PaymentProviderValue,
-  type ChargeMessageSettingsDto,
 } from '@client-manager/shared';
 import { showToast } from '../../../shared/utils/toast';
 import { ChargeMessageTemplatesSection } from '../../settings/components/ChargeMessageTemplatesSection';
@@ -56,6 +55,7 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
   const [dueDate, setDueDate] = React.useState('');
   const [invoiceChargeMessages, setInvoiceChargeMessages] =
     React.useState<ChargeMessageSettingsDto | null>(null);
+  const [chargeMessagesEditing, setChargeMessagesEditing] = React.useState(false);
 
   const { data: invoice, isLoading, isError } = useQuery({
     queryKey: invoiceQueryKey,
@@ -172,26 +172,6 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
     showToast.success('PIX copiado!');
   };
 
-  const openWhatsApp = () => {
-    if (!invoice?.payerPhone) {
-      showToast.error('Telefone do pagador não cadastrado');
-      return;
-    }
-    const payerName =
-      invoice.customer?.name ?? invoice.account?.name ?? 'cliente';
-    const text = buildBillingChargeMessage({
-      payerName,
-      tenantName: invoice.account?.name,
-      invoice: {
-        pixCopyPaste: invoice.pixCopyPaste,
-        amountCents: invoice.amountCents,
-        billingCycleKey: invoice.billingCycleKey,
-        dueDate: invoice.dueDate,
-      },
-    });
-    window.open(buildWaMeUrl(invoice.payerPhone, text), '_blank', 'noopener,noreferrer');
-  };
-
   if (isLoading) {
     return (
       <PageLayout title="Fatura">
@@ -221,6 +201,19 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
     BILLING_INVOICE_STATUS_LABELS[invoice.status as BillingInvoiceStatusValue] ?? invoice.status;
   const isCanceled = invoice.status === 'canceled';
   const isPayable = isPayableInvoiceStatus(invoice.status as BillingInvoiceStatusValue);
+
+  const chargePreviewContext: ChargeMessageTemplateContext = {
+    payerName: invoice.customer?.name ?? invoice.account?.name ?? 'Cliente',
+    tenantName: invoice.account?.name ?? '',
+    description: invoice.description ?? undefined,
+    invoice: {
+      pixCopyPaste: invoice.pixCopyPaste,
+      amountCents: invoice.amountCents,
+      billingCycleKey: invoice.billingCycleKey,
+      dueDate: invoice.dueDate,
+      paymentDeliveryType: 'emv',
+    },
+  };
 
   return (
     <PageLayout
@@ -288,26 +281,14 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
               </button>
             ) : null}
             {!isCanceled && invoice.pixCopyPaste ? (
-              <>
-                <button
-                  type="button"
-                  onClick={copyPix}
-                  className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-                >
-                  <Copy className="h-4 w-4" />
-                  Copiar PIX
-                </button>
-                {invoice.payerPhone ? (
-                  <button
-                    type="button"
-                    onClick={openWhatsApp}
-                    className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    WhatsApp
-                  </button>
-                ) : null}
-              </>
+              <button
+                type="button"
+                onClick={copyPix}
+                className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+              >
+                <Copy className="h-4 w-4" />
+                Copiar PIX
+              </button>
             ) : null}
           </div>
         </div>
@@ -387,17 +368,22 @@ export const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ variant })
               title="Mensagens WhatsApp desta fatura"
               value={invoiceChargeMessages}
               onChange={setInvoiceChargeMessages}
+              previewContext={chargePreviewContext}
+              previewFirst
+              onEditModeChange={setChargeMessagesEditing}
             />
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                disabled={saveChargeMessagesMutation.isPending}
-                onClick={() => saveChargeMessagesMutation.mutate()}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {saveChargeMessagesMutation.isPending ? 'Salvando...' : 'Salvar mensagens'}
-              </button>
-            </div>
+            {chargeMessagesEditing ? (
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  disabled={saveChargeMessagesMutation.isPending}
+                  onClick={() => saveChargeMessagesMutation.mutate()}
+                  className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {saveChargeMessagesMutation.isPending ? 'Salvando...' : 'Salvar mensagens'}
+                </button>
+              </div>
+            ) : null}
           </section>
         ) : null}
 

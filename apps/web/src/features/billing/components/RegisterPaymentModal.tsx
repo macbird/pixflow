@@ -1,21 +1,20 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Calendar, CreditCard, FileText, User } from 'lucide-react';
+import { Calendar, CreditCard, FileText } from 'lucide-react';
 import { FormModal } from '../../../shared/ui/modals/FormModal';
 import { FormField } from '../../../shared/ui/forms/FormField';
 import { FormInput } from '../../../shared/ui/forms/FormInput';
 import { FormSelect } from '../../../shared/ui/forms/FormSelect';
 import { AsyncSearchSelect } from '../../../shared/ui/forms/AsyncSearchSelect';
+import type { AsyncSearchSelectOption } from '../../../shared/ui/forms/AsyncSearchSelect';
 import { formTextareaClass } from '../../../shared/ui/forms/form-styles';
-import { customersApi } from '../../customers/api/customers.api';
 import { tenantBillingApi } from '../api/billing.api';
-import { mapCustomersToSearchOptions } from '../utils/customer-search-options';
 import { formatCents } from '../../../shared/ui/billing/format-billing';
 import {
   BILLING_INVOICE_STATUS_LABELS,
   MANUAL_PAYMENT_METHOD_LABELS,
   MANUAL_PAYMENT_METHOD_VALUES,
   type BillingInvoiceStatusValue,
+  type InvoiceListItem,
   type ManualPaymentMethodValue,
   type RegisterPaymentInput,
 } from '@client-manager/shared';
@@ -35,16 +34,20 @@ function todayDateInputValue() {
   return `${year}-${month}-${day}`;
 }
 
-function formatInvoiceOptionLabel(invoice: {
-  billingCycleKey: string;
-  amountCents: number;
-  status: string;
-  dueDate: string;
-}) {
-  const statusLabel =
-    BILLING_INVOICE_STATUS_LABELS[invoice.status as BillingInvoiceStatusValue] ?? invoice.status;
-  const dueLabel = new Date(invoice.dueDate).toLocaleDateString('pt-BR');
-  return `${invoice.billingCycleKey} · ${formatCents(invoice.amountCents)} · ${statusLabel} · venc. ${dueLabel}`;
+function mapPayableInvoicesToSearchOptions(invoices: InvoiceListItem[]): AsyncSearchSelectOption[] {
+  return invoices.map((invoice) => {
+    const customerName = invoice.customer?.name ?? 'Sem cliente';
+    const statusLabel =
+      BILLING_INVOICE_STATUS_LABELS[invoice.status as BillingInvoiceStatusValue] ?? invoice.status;
+    const dueLabel = new Date(invoice.dueDate).toLocaleDateString('pt-BR');
+
+    return {
+      value: invoice.id,
+      label: `${customerName} · ${invoice.billingCycleKey} · ${formatCents(invoice.amountCents)}`,
+      hint: `${statusLabel} · venc. ${dueLabel}`,
+      meta: { invoice },
+    };
+  });
 }
 
 export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
@@ -53,57 +56,32 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [customerId, setCustomerId] = React.useState('');
-  const [customerLabel, setCustomerLabel] = React.useState('');
   const [invoiceId, setInvoiceId] = React.useState('');
+  const [invoiceLabel, setInvoiceLabel] = React.useState('');
+  const [selectedInvoice, setSelectedInvoice] = React.useState<InvoiceListItem | null>(null);
   const [method, setMethod] = React.useState<ManualPaymentMethodValue>('pix');
   const [notes, setNotes] = React.useState('');
   const [paidAt, setPaidAt] = React.useState('');
 
-  const searchCustomers = React.useCallback(async (query: string) => {
-    const page = await customersApi.list({
+  const searchPayableInvoices = React.useCallback(async (query: string) => {
+    const page = await tenantBillingApi.listInvoices({
       page: 1,
       pageSize: 20,
       filter: query,
-      selectableOnly: true,
+      payableOnly: true,
     });
-    return mapCustomersToSearchOptions(page.data);
+    return mapPayableInvoicesToSearchOptions(page.data);
   }, []);
-
-  const { data: payableInvoices, isLoading: loadingInvoices } = useQuery({
-    queryKey: ['invoices', 'payable-for-payment', customerId],
-    queryFn: () =>
-      tenantBillingApi.listInvoices({
-        page: 1,
-        pageSize: 50,
-        filter: '',
-        payableOnly: true,
-        filters: { customerId },
-      }),
-    enabled: isOpen && Boolean(customerId),
-  });
 
   React.useEffect(() => {
     if (!isOpen) return;
-    setCustomerId('');
-    setCustomerLabel('');
     setInvoiceId('');
+    setInvoiceLabel('');
+    setSelectedInvoice(null);
     setMethod('pix');
     setNotes('');
     setPaidAt(todayDateInputValue());
   }, [isOpen]);
-
-  React.useEffect(() => {
-    setInvoiceId('');
-  }, [customerId]);
-
-  React.useEffect(() => {
-    if (!payableInvoices?.data.length || invoiceId) return;
-    setInvoiceId(payableInvoices.data[0].id);
-  }, [payableInvoices, invoiceId]);
-
-  const selectedInvoice = payableInvoices?.data.find((invoice) => invoice.id === invoiceId);
-  const hasPayableInvoices = Boolean(payableInvoices?.data.length);
 
   const handleSave = () => {
     if (!invoiceId) return;
@@ -123,60 +101,36 @@ export const RegisterPaymentModal: React.FC<RegisterPaymentModalProps> = ({
       isPending={isPending}
       saveLabel="Registrar pagamento"
       pendingLabel="Registrando..."
-      saveDisabled={!customerId || !invoiceId || !hasPayableInvoices}
+      saveDisabled={!invoiceId}
       onSave={handleSave}
     >
       <div className="space-y-4">
         <AsyncSearchSelect
-          label="Cliente"
-          prefixIcon={User}
-          value={customerId}
-          selectedLabel={customerLabel}
+          label="Fatura"
+          prefixIcon={FileText}
+          value={invoiceId}
+          selectedLabel={invoiceLabel}
           onChange={(id, option) => {
-            setCustomerId(id);
-            setCustomerLabel(option?.label ?? '');
+            setInvoiceId(id);
+            setInvoiceLabel(option?.label ?? '');
+            setSelectedInvoice((option?.meta?.invoice as InvoiceListItem | undefined) ?? null);
           }}
-          onSearch={searchCustomers}
-          placeholder="Buscar cliente por nome ou telefone..."
-          emptyMessage="Nenhum cliente encontrado"
+          onSearch={searchPayableInvoices}
+          placeholder="Buscar fatura por nome do cliente, ciclo..."
+          emptyMessage="Nenhuma fatura pendente encontrada"
+          hint="Somente faturas em aberto ou vencidas"
         />
-
-        {!customerId ? (
-          <p className="text-sm text-slate-500">Selecione um cliente para ver as faturas pendentes.</p>
-        ) : loadingInvoices ? (
-          <p className="text-sm text-slate-500">Carregando faturas pendentes...</p>
-        ) : !hasPayableInvoices ? (
-          <p className="text-sm text-slate-500">
-            Nenhuma fatura pendente (em aberto ou vencida) para este cliente.
-          </p>
-        ) : payableInvoices!.data.length === 1 ? (
-          <FormField label="Fatura" prefixIcon={FileText}>
-            <p className="rounded-[10px] bg-form-field px-4 py-3 text-sm text-slate-800">
-              {formatInvoiceOptionLabel(payableInvoices!.data[0])}
-            </p>
-          </FormField>
-        ) : (
-          <FormSelect
-            label="Fatura"
-            prefixIcon={FileText}
-            value={invoiceId}
-            onChange={(e) => setInvoiceId(e.target.value)}
-          >
-            {payableInvoices!.data.map((invoice) => (
-              <option key={invoice.id} value={invoice.id}>
-                {formatInvoiceOptionLabel(invoice)}
-              </option>
-            ))}
-          </FormSelect>
-        )}
 
         {selectedInvoice ? (
           <p className="text-xs text-slate-500">
-            Vencimento: {new Date(selectedInvoice.dueDate).toLocaleDateString('pt-BR')}
+            Cliente: {selectedInvoice.customer?.name ?? '—'} · Vencimento:{' '}
+            {new Date(selectedInvoice.dueDate).toLocaleDateString('pt-BR')} ·{' '}
+            {BILLING_INVOICE_STATUS_LABELS[selectedInvoice.status as BillingInvoiceStatusValue] ??
+              selectedInvoice.status}
           </p>
         ) : null}
 
-        {hasPayableInvoices ? (
+        {invoiceId ? (
           <>
             <FormSelect
               label="Método"

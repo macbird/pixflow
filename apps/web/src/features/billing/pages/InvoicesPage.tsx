@@ -16,8 +16,10 @@ import { INVOICE_FILTER_FIELDS } from '../../../shared/ui/lists/list-filter-fiel
 import {
   getBillingInvoiceStatusBadgeClass,
   BILLING_INVOICE_STATUS_LABELS,
+  INVOICE_KIND_LABELS,
   isPayableInvoiceStatus,
   type BillingInvoiceStatusValue,
+  type InvoiceKindValue,
   type InvoiceListItem,
 } from '@client-manager/shared';
 import { showToast } from '../../../shared/utils/toast';
@@ -108,15 +110,24 @@ export const InvoicesPage: React.FC<InvoicesPageProps> = ({ variant }) => {
 
   const columns = [
     ...(variant === 'admin'
-      ? [{ header: 'Conta', accessor: (i: InvoiceListItem) => i.account?.name ?? '-', width: '22%' }]
+      ? [{ header: 'Conta', accessor: (i: InvoiceListItem) => i.account?.name ?? '-', width: '20%' }]
       : [
           {
             header: 'Cliente',
             accessor: (i: InvoiceListItem) => i.customer?.name ?? '-',
-            width: '22%',
+            width: '20%',
           },
         ]),
-    { header: 'Ciclo', accessor: (i: InvoiceListItem) => i.billingCycleKey, width: '12%' },
+    {
+      header: 'Tipo',
+      accessor: (i: InvoiceListItem) => (
+        <span className="text-sm text-slate-700">
+          {INVOICE_KIND_LABELS[i.kind as InvoiceKindValue] ?? i.kind}
+        </span>
+      ),
+      width: '10%',
+    },
+    { header: 'Ciclo', accessor: (i: InvoiceListItem) => i.billingCycleKey, width: '11%' },
     {
       header: 'Valor',
       accessor: (i: InvoiceListItem) => formatBrl(i.amountCents),
@@ -192,7 +203,8 @@ export const InvoicesPage: React.FC<InvoicesPageProps> = ({ variant }) => {
           {variant === 'admin' ? i.account?.name : i.customer?.name}
         </div>
         <div className="truncate text-xs text-slate-500">
-          {i.billingCycleKey} · {formatBrl(i.amountCents)}
+          {INVOICE_KIND_LABELS[i.kind as InvoiceKindValue] ?? i.kind} · {i.billingCycleKey} ·{' '}
+          {formatBrl(i.amountCents)}
         </div>
       </div>
       <div className="flex w-[55%] shrink-0 items-center gap-2">
