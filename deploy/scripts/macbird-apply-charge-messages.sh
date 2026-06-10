@@ -24,6 +24,7 @@ echo "==> Prisma generate"
 npx prisma generate --schema apps/api/prisma/schema.prisma
 
 echo "==> Restart dev stack"
+find "$ROOT/deploy/scripts" -maxdepth 1 -name '*.sh' -exec sed -i 's/\r$//' {} +
 bash "$ROOT/deploy/scripts/macbird-dev-evolution.sh"
 
 echo "==> Done. Open http://$(hostname -I 2>/dev/null | awk '{print $1}'):5173/settings"
