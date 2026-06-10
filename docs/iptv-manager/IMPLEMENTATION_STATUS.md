@@ -1,8 +1,8 @@
 # Status da Implementação — Cliente Manager
 
-Documento vivo: última verificação em **04/06/2026** (Fases 1 e 2 confirmadas no código; ajustes recentes em billing/UX refletidos abaixo).
+Documento vivo: última verificação em **10/06/2026** (automação D-N, faturas avulsas, scheduler node-cron).
 
-Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [03-integrations-pix-whatsapp.md](./03-integrations-pix-whatsapp.md) · [09-improvements-p0-p1.md](./09-improvements-p0-p1.md) · [11-payment-and-activations.md](./11-payment-and-activations.md)
+Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [03-integrations-pix-whatsapp.md](./03-integrations-pix-whatsapp.md) · [09-improvements-p0-p1.md](./09-improvements-p0-p1.md) · [11-payment-and-activations.md](./11-payment-and-activations.md) · [12-billing-automation-scheduler.md](./12-billing-automation-scheduler.md)
 
 ---
 
@@ -31,7 +31,7 @@ Relacionado: [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [03-integ
 | **2.5** | **Cobrança plataforma → tenant** (SaaS mensal) | ⚠️ **Parcial (MVP UI + API stub)** |
 | **3** | Cobrança tenant → cliente final (pagamento, faturas) | ⚠️ **Parcial (mesmo motor, scope tenant)** |
 | **3.1** | **Pagamento híbrido** (EMV + checkout link) | 📋 **Doc pronta; código pendente** |
-| **4** | Automação D-N + WhatsApp | 📋 Planejada |
+| **4** | Automação D-N + WhatsApp | ⚠️ **Parcial (scheduler + UI + avulsas)** |
 | **5** | Renovações pós-pagamento + relatórios | 📋 Planejada |
 
 **Próximo foco recomendado:** adapters EMV reais (Asaas + Mercado Pago), webhooks idempotentes, depois campos híbridos (`paymentDeliveryType`, `checkoutUrl`) + InfinitePay.
@@ -153,7 +153,10 @@ Reutiliza o **mesmo motor** com `scope = tenant`.
 | Webhook Mercado Pago por tenant slug | ✅ |
 | Faturas no detalhe do cliente | ❌ |
 | P0.3 idempotência webhook (MP), P0.5 copiar PIX + wa.me no detalhe fatura | ✅ (detalhe; cards listagem pendente) |
-| Job D-N automático | ❌ (Fase 4) |
+| Job D-N automático | ✅ (node-cron, env configurável; doc [12](./12-billing-automation-scheduler.md)) |
+| Faturas avulsas (`one_off`) | ✅ (criação, mensagens, PIX/webhook; sem renovação IPTV) |
+| Templates cobrança subscription + avulsa | ✅ |
+| Auto-close faturas subscription (opt-in) | ✅ |
 
 ---
 
@@ -192,10 +195,22 @@ Ver checklist completo em [09-improvements-p0-p1.md](./09-improvements-p0-p1.md)
 
 ---
 
-## 📋 Fase 4 — Automação + WhatsApp
+## ⚠️ Fase 4 — Automação + WhatsApp (parcial)
 
-- Job D-N: fatura + pagamento + template WhatsApp com **`{{payment_block}}`** (PIX ou link)
-- Evolution API ou oficial ([03-integrations-pix-whatsapp.md](./03-integrations-pix-whatsapp.md))
+**Documentação:** [12-billing-automation-scheduler.md](./12-billing-automation-scheduler.md)
+
+| Item | Status |
+|------|--------|
+| Scheduler node-cron in-process | ✅ |
+| Automação D-N (fatura subscription + WhatsApp) | ✅ |
+| Config tenant (aba Automação, horário, D-N) | ✅ |
+| Faturas avulsas + editor de mensagens | ✅ |
+| Auto-close subscription (opt-in) | ✅ |
+| Evolution + Meta WhatsApp connect (branch) | ⚠️ Parcial |
+| Template `{{payment_block}}` híbrido EMV+link | ❌ |
+| BullMQ / fila Redis (opcional) | ❌ |
+
+Pendente Fase 4: `{{payment_block}}` unificado, adapters webhook Asaas, hardening produção Square Cloud.
 
 ---
 

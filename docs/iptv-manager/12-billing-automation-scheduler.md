@@ -91,8 +91,45 @@ Mensagens de cobrança ficam na aba **Cobrança** (`subscription` vs `oneOff`). 
 | `kind` | `subscription` | `one_off` |
 | Ciclo | `YYYY-MM` | `one-off-{8 chars}` |
 | Renovação IPTV ao pagar | Sim | **Não** |
+| Registro `payments` (webhook ou manual) | Sim | **Sim** |
+| Webhook Mercado Pago | Sim | **Sim** (mesmo fluxo) |
+| Tarefas de ativação IPTV | Sim | **Não** |
 | Auto-close | Só se flag tenant | **Nunca** |
 | Índice único ciclo | Sim (não canceladas) | Não |
+
+---
+
+## Pagamento de faturas avulsas (webhook e manual)
+
+Avulsas usam o **mesmo motor** de pagamento que assinaturas. O `kind` só afeta pós-pagamento (ativação IPTV).
+
+### Fluxo webhook (Mercado Pago)
+
+1. Fatura avulsa criada → `generatePayment` gera PIX e grava `providerChargeId` + referência externa (`invoice.id`).
+2. Cliente paga → MP envia webhook para `/api/webhooks/payment/{tenantId}/mercadopago`.
+3. `PaymentWebhookService` localiza a fatura (sem filtrar `kind`) e chama `PaymentConfirmationService.confirm()` com `source: 'webhook'`.
+4. Cria linha em **`payments`**, fatura → **`paid`**, notificação WhatsApp de pagamento recebido (se configurada).
+5. **Não** cria `connection_renewal_task` / não altera `customer.expiresAt`.
+
+Pagamento parcial é rejeitado (`amountCents` deve bater). Webhook duplicado é idempotente (`providerPaymentId` UNIQUE).
+
+### Pagamento manual
+
+Na UI (detalhe da fatura ou fluxo de pagamentos), confirmar pagamento manual também passa por `confirm()` com `source: 'manual'` — mesmo efeito, sem webhook.
+
+### PSP com webhook hoje
+
+| Provider | Webhook implementado |
+|----------|---------------------|
+| Mercado Pago | ✅ |
+| Asaas / Efi / outros | ❌ (confirmar manual ou implementar adapter webhook) |
+
+### Teste rápido (avulsa + webhook)
+
+1. Criar fatura avulsa para um cliente.
+2. Gerar PIX (`generatePayment`).
+3. Pagar via MP sandbox ou simular webhook com `payment_id` aprovado.
+4. Conferir: `payments` com `source = webhook`, fatura `paid`, **sem** novas ativações pendentes.
 
 ---
 
