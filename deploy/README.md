@@ -24,11 +24,11 @@ Push em `main` dispara `.github/workflows/deploy.yml`:
 4. **`squarecloud app commit --restart`**
 5. **Verify** — `/health` e `/health/db`
 
-No boot (`start-prod.sh`): `npm install --omit=dev` → `prisma migrate deploy` → `node apps/api/dist/main.js`.
+No boot (`start-prod.sh`): `npm install --omit=dev` → `node apps/api/dist/main.js`.
 
-As migrations rodam **duas vezes** de propósito: no CI (garante antes do restart) e no boot (rede de segurança). O `migrate deploy` é idempotente — se já aplicou, não faz nada.
+**Migrations só no CI** — o Prisma CLI na Square Cloud está quebrado (`prisma_schema_build_bg.wasm ENOENT` em `node_modules/.bin`). Rodar `migrate` no boot impedia a API de subir (`set -e` aborta antes do `node`).
 
-O que **não** roda no boot é `npx prisma generate` manual — isso quebrava com erro de `.wasm`. O client Prisma vem do build no CI + postinstall do `npm install`.
+O client Prisma vem do `npm run build` no CI (`prisma generate` + `tsc`).
 
 Diagnóstico na macbird:
 

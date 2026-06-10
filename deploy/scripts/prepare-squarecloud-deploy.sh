@@ -90,9 +90,6 @@ cat >> start-prod.sh <<'EOF'
 echo "==> Install production dependencies"
 npm install --omit=dev
 
-echo "==> Apply database migrations"
-npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
-
 echo "==> Start API"
 exec node apps/api/dist/main.js
 EOF
