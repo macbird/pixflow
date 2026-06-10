@@ -18,14 +18,17 @@ cd ~/client-manager
 
 Push em `main` dispara `.github/workflows/deploy.yml`:
 
-1. **Build** no runner
-2. **`prisma migrate deploy`** no CI (antes do restart)
-3. **`squarecloud app commit --restart`**
-4. **Health gate** com retries (~7 min)
-5. **Confirmação de versão** — `/health` retorna `gitSha`; o workflow **falha** se não bater com o commit deployado
-6. **Sem rollback automático** — falha fica visível no Actions; rollback é manual se necessário
+1. **Build** no runner (`npm install` + `npm run build` — o build já roda `prisma generate`)
+2. **Prepare** — `client.p12` + `start-prod.sh`
+3. **`prisma migrate deploy` no CI** — aplica migrations no banco **antes** do restart (com `client.p12` local)
+4. **`squarecloud app commit --restart`**
+5. **Verify** — `/health` e `/health/db`
 
-O CI roda `npm install --omit=dev` + `prisma generate` e envia `node_modules` no commit (`.squareignore` inclui deps). O `start-prod.sh` só executa `node apps/api/dist/main.js`.
+No boot (`start-prod.sh`): `npm install --omit=dev` → `prisma migrate deploy` → `node apps/api/dist/main.js`.
+
+As migrations rodam **duas vezes** de propósito: no CI (garante antes do restart) e no boot (rede de segurança). O `migrate deploy` é idempotente — se já aplicou, não faz nada.
+
+O que **não** roda no boot é `npx prisma generate` manual — isso quebrava com erro de `.wasm`. O client Prisma vem do build no CI + postinstall do `npm install`.
 
 Diagnóstico na macbird:
 

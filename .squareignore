@@ -2,8 +2,6 @@
 .github
 deploy
 .ci-migrate-database-url
-!node_modules
-!node_modules/**
 docs
 screenshot
 *.png

@@ -87,7 +87,13 @@ export DEPLOYED_AT="${DEPLOYED_AT}"
 EOF
 cat >> start-prod.sh <<'EOF'
 
-echo "==> Start API (production deps bundled at deploy time)"
+echo "==> Install production dependencies"
+npm install --omit=dev
+
+echo "==> Apply database migrations"
+npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+
+echo "==> Start API"
 exec node apps/api/dist/main.js
 EOF
 chmod +x start-prod.sh
