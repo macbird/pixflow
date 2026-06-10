@@ -28,7 +28,9 @@ Push em `main` dispara `.github/workflows/deploy.yml`:
 
 No boot (`start-prod.sh`): só `node apps/api/dist/main.js` — sem `npm install`.
 
-Pacote prebuilt inclui: `dist`, `node_modules`, `client.p12`, `squarecloud.app`, `start-prod.sh`.
+Pacote prebuilt inclui: `dist`, `node_modules`, `client.p12`, `squarecloud.app` (`MEMORY=512`), `start-prod.sh`.
+
+**Importante:** `MEMORY` no zip deve bater com a RAM da app no painel. Pedir 1024MB com plano sem RAM livre gera `CLUSTER_COMMIT_FAILED` (HTTP 400).
 
 Diagnóstico na macbird:
 

@@ -1,5 +1,5 @@
 MAIN=apps/api/dist/main.js
-MEMORY=1024
+MEMORY=512
 VERSION=recommended
 DISPLAY_NAME=pixflow
 DESCRIPTION=Unified PixFlow App (API + Web)

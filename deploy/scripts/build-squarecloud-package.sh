@@ -38,7 +38,12 @@ rm -rf "$PKG_DIR" "$ZIP"
 mkdir -p "$PKG_DIR"
 
 echo "==> Copying runtime files"
-cp package.json squarecloud.app start-prod.sh client.p12 "$PKG_DIR/"
+cp package.json start-prod.sh client.p12 "$PKG_DIR/"
+cp squarecloud.app "$PKG_DIR/"
+if grep -q '^MEMORY=1024' "$PKG_DIR/squarecloud.app"; then
+  echo "::error::squarecloud.app MEMORY must be 512 for current plan/app allocation" >&2
+  exit 1
+fi
 
 echo "==> Copying production node_modules"
 rsync -a node_modules "$PKG_DIR/"
