@@ -77,11 +77,7 @@ EOF
 cat >> start-prod.sh <<'EOF'
 
 echo "==> Install production dependencies"
-if [ -f package-lock.json ]; then
-  npm ci --omit=dev --ignore-scripts
-else
-  npm install --omit=dev --ignore-scripts
-fi
+npm install --omit=dev --ignore-scripts
 
 echo "==> Prisma generate"
 npx prisma generate --schema apps/api/prisma/schema.prisma
