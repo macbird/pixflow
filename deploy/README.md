@@ -22,7 +22,7 @@ Push em `main` dispara `.github/workflows/deploy.yml`:
 2. **Production deps** — `npm prune --omit=dev` + validação do `argon2`
 3. **Prepare** — `client.p12` + `start-prod.sh`
 4. **Migrations** — `prisma migrate deploy` no CI (com `client.p12` local)
-5. **Package** — `deploy/scripts/build-squarecloud-package.sh` → `deploy/artifacts/pixflow-prebuilt.zip`
+5. **Package** — monta pasta limpa, `npm install --omit=dev` dentro dela, zip < 85MB
 6. **Deploy** — `squarecloud app commit --file pixflow-prebuilt.zip --restart`
 7. **Verify** — `/health` e `/health/db`
 

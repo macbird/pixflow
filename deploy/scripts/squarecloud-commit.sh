@@ -93,14 +93,9 @@ if [ "$CLI_EXIT" -ne 0 ]; then
   report_failure "squarecloud app commit exited with code ${CLI_EXIT}"
 fi
 
-if grep -qi 'CLUSTER_COMMIT_FAILED' "$COMMIT_LOG"; then
-  MATCH="$(grep -i 'CLUSTER_COMMIT_FAILED' "$COMMIT_LOG" | head -5)"
-  report_failure "Square Cloud returned CLUSTER_COMMIT_FAILED — ${MATCH}"
-fi
-
-if grep -qiE 'commit failed|HTTP 400|"status"[[:space:]]*:[[:space:]]*"error"' "$COMMIT_LOG"; then
-  MATCH="$(grep -iE 'commit failed|HTTP 400|"status"[[:space:]]*:[[:space:]]*"error"' "$COMMIT_LOG" | head -5)"
-  report_failure "Square Cloud commit error in CLI output — ${MATCH}"
+if grep -qiE 'CLUSTER_COMMIT_FAILED|KEEP_CALM|"status"[[:space:]]*:[[:space:]]*"error"' "$COMMIT_LOG"; then
+  MATCH="$(grep -iE 'CLUSTER_COMMIT_FAILED|KEEP_CALM|"status"[[:space:]]*:[[:space:]]*"error"' "$COMMIT_LOG" | head -5)"
+  report_failure "Square Cloud commit error — ${MATCH}"
 fi
 
 echo "=== Square Cloud CLI output ==="
