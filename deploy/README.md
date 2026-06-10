@@ -30,7 +30,9 @@ No boot (`start-prod.sh`): só `node apps/api/dist/main.js` — sem `npm install
 
 Pacote prebuilt inclui: `dist`, `node_modules`, `client.p12`, `squarecloud.app` (`MEMORY=512`), `start-prod.sh`.
 
-**Importante:** `MEMORY` no zip deve bater com a RAM da app no painel. Pedir 1024MB com plano sem RAM livre gera `CLUSTER_COMMIT_FAILED` (HTTP 400).
+**Importante:** `MEMORY` no zip deve bater com a RAM da app no painel (512MB). Pedir 1024MB com plano sem RAM livre gera `CLUSTER_COMMIT_FAILED` (HTTP 400).
+
+**Fail-fast:** qualquer step com erro para o job (`bash -euo pipefail`). Commit Square Cloud falha se CLI retornar erro ou `CLUSTER_COMMIT_FAILED`. Verify só roda se todos os steps anteriores passarem.
 
 Diagnóstico na macbird:
 

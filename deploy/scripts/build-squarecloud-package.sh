@@ -40,7 +40,7 @@ mkdir -p "$PKG_DIR"
 echo "==> Copying runtime files"
 cp package.json start-prod.sh client.p12 "$PKG_DIR/"
 cp squarecloud.app "$PKG_DIR/"
-if grep -q '^MEMORY=1024' "$PKG_DIR/squarecloud.app"; then
+if ! grep -q '^MEMORY=512' "$PKG_DIR/squarecloud.app"; then
   echo "::error::squarecloud.app MEMORY must be 512 for current plan/app allocation" >&2
   exit 1
 fi
@@ -73,11 +73,25 @@ ls -lh "$ZIP"
 ZIP_MB="$(du -m "$ZIP" | awk '{print $1}')"
 echo "zip size: ${ZIP_MB}MB"
 if [ "${ZIP_MB}" -gt 100 ]; then
-  echo "::warning::Package is larger than 100MB — Square Cloud may reject the upload"
+  echo "::error::Package is ${ZIP_MB}MB — exceeds 100MB Square Cloud upload limit" >&2
+  exit 1
 fi
 du -sh "$PKG_DIR/node_modules" | awk '{print "node_modules in package:", $1}'
 
 echo "==> Package sanity check"
-unzip -l "$ZIP" | grep -E 'squarecloud.app|start-prod.sh|client.p12|apps/api/dist/main.js|apps/web/dist/index.html|argon2' | head -20 || true
+ZIP_LIST="$(mktemp)"
+unzip -l "$ZIP" > "$ZIP_LIST"
+for required in \
+  squarecloud.app \
+  start-prod.sh \
+  client.p12 \
+  apps/api/dist/main.js \
+  apps/web/dist/index.html; do
+  if ! grep -Fq "$required" "$ZIP_LIST"; then
+    echo "::error::Missing ${required} in zip" >&2
+    exit 1
+  fi
+done
+rm -f "$ZIP_LIST"
 
 echo "PIXFLOW_PACKAGE=${ZIP}"

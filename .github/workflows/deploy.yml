@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -41,7 +45,6 @@ jobs:
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          set -euo pipefail
           export DATABASE_URL="$(cat .ci-migrate-database-url)"
           npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
 
@@ -52,24 +55,11 @@ jobs:
         env:
           SQUARE_CLOUD_API_TOKEN: ${{ secrets.SQUARE_CLOUD_API_TOKEN }}
           SQUARE_CLOUD_APP_ID: ${{ secrets.SQUARE_CLOUD_APP_ID }}
-        run: |
-          set -euo pipefail
-          if [ -z "$SQUARE_CLOUD_API_TOKEN" ]; then
-            echo "::error::SQUARE_CLOUD_API_TOKEN secret is missing or empty"
-            exit 1
-          fi
-          if [ -z "$SQUARE_CLOUD_APP_ID" ]; then
-            echo "::error::SQUARE_CLOUD_APP_ID secret is missing or empty"
-            exit 1
-          fi
-          test -f deploy/artifacts/pixflow-prebuilt.zip
-          npm install -g @squarecloud/cli
-          squarecloud auth login --token "$SQUARE_CLOUD_API_TOKEN"
-          squarecloud app commit "$SQUARE_CLOUD_APP_ID" --file deploy/artifacts/pixflow-prebuilt.zip --restart
+        run: bash deploy/scripts/squarecloud-commit.sh deploy/artifacts/pixflow-prebuilt.zip
 
       - name: Verify deploy
+        if: success()
         run: |
-          set -euo pipefail
           echo "Waiting for app startup..."
           for attempt in $(seq 1 30); do
             if curl -fsS --max-time 25 "${API_PUBLIC_BASE_URL}/health" >/dev/null 2>&1; then
