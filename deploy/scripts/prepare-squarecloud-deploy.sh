@@ -88,7 +88,18 @@ EOF
 cat >> start-prod.sh <<'EOF'
 
 echo "==> Install production dependencies"
-npm install --omit=dev
+ARGON2_BINDING="node_modules/argon2/lib/binding/napi-v3/argon2.node"
+if [ ! -f "$ARGON2_BINDING" ]; then
+  echo "Missing argon2 native binding — reinstalling node_modules"
+  rm -rf node_modules
+fi
+npm install --omit=dev --foreground-scripts
+
+if [ ! -f "$ARGON2_BINDING" ]; then
+  echo "::error::argon2 native binding still missing after npm install"
+  ls -la node_modules/argon2/lib/binding/ 2>/dev/null || true
+  exit 1
+fi
 
 echo "==> Start API"
 exec node apps/api/dist/main.js
