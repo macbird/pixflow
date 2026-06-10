@@ -18,15 +18,16 @@ cd ~/client-manager
 
 Push em `main` dispara `.github/workflows/deploy.yml`:
 
-1. **Build** no runner (`npm install` + `npm run build` — o build já roda `prisma generate`)
-2. **Prepare** — `client.p12` + `start-prod.sh`
-3. **`prisma migrate deploy` no CI** — aplica migrations no banco **antes** do restart (com `client.p12` local)
-4. **`squarecloud app commit --restart`**
-5. **Verify** — `/health` e `/health/db`
+1. **Build** no runner (`npm install` + `npm run build`)
+2. **Production deps** — `npm prune --omit=dev` + validação do binding do `argon2` (Node 24, igual à Square Cloud)
+3. **Prepare** — `client.p12` + `start-prod.sh`
+4. **`prisma migrate deploy` no CI** — antes do restart
+5. **`squarecloud app commit --restart`** — envia `node_modules` via `.squareignore`
+6. **Verify** — `/health` e `/health/db`
 
-No boot (`start-prod.sh`): se faltar o binding nativo do `argon2`, apaga `node_modules` e roda `npm install --omit=dev` de novo; depois `node apps/api/dist/main.js`.
+No boot (`start-prod.sh`): só `node apps/api/dist/main.js` — **sem `npm install`**.
 
-**Migrations só no CI** — o Prisma CLI na Square Cloud quebra no boot (`wasm ENOENT`). O client Prisma vem do `npm run build` no CI.
+**Migrations só no CI** — Prisma CLI quebra no boot da Square Cloud (`wasm ENOENT`).
 
 Diagnóstico na macbird:
 

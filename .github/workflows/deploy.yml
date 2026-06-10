@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm install
@@ -24,6 +24,14 @@ jobs:
         env:
           VITE_API_URL: /api
         run: npm run build
+
+      - name: Production dependencies for Square Cloud
+        run: |
+          set -euo pipefail
+          npm prune --omit=dev
+          test -f node_modules/argon2/lib/binding/napi-v3/argon2.node
+          echo "argon2 native binding OK"
+          du -sh node_modules | awk '{print "node_modules size:", $1}'
 
       - name: Prepare Square Cloud deploy artifacts
         env:
