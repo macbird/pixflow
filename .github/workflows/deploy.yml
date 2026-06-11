@@ -36,6 +36,8 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           CREDENTIALS_ENCRYPTION_KEY: ${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
           API_PUBLIC_BASE_URL: ${{ env.API_PUBLIC_BASE_URL }}
+          EVOLUTION_BASE_URL: ${{ secrets.EVOLUTION_BASE_URL }}
+          EVOLUTION_API_KEY: ${{ secrets.EVOLUTION_API_KEY }}
         run: bash deploy/scripts/prepare-squarecloud-deploy.sh
 
       - name: Database migrations
