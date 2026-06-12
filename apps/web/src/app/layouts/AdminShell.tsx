@@ -53,7 +53,7 @@ export const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 
   return (
-    <div className="h-screen flex bg-form-field">
+    <div className="flex h-[100dvh] max-h-[100dvh] bg-form-field">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:flex-shrink-0">
         <div className="flex flex-col w-64">
@@ -97,7 +97,7 @@ export const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }
       )}
 
       <div className="flex flex-col w-0 flex-1 overflow-hidden min-h-0">
-        <header className="md:hidden flex h-16 shrink-0 items-center border-b border-slate-200/80 bg-form-field px-4">
+        <header className="z-20 flex h-16 shrink-0 items-center border-b border-slate-200/80 bg-form-field px-4 pt-[max(0px,env(safe-area-inset-top))] md:hidden">
           <button
             type="button"
             className="h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-gray-900 focus:outline-none"

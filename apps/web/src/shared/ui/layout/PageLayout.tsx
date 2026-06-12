@@ -33,7 +33,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   );
 
   return (
-    <div className={`h-full flex flex-col ${className} ${pageCanvasClass}`}>
+    <div className={`flex h-full min-h-0 flex-col overflow-hidden ${className} ${pageCanvasClass}`}>
       {/* Mobile Portal for Top Bar */}
       {portalNode && createPortal(headerContent, portalNode)}
 
@@ -45,15 +45,17 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
       )}
 
       {/* Main Content (Scrollable) */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className={`${noPadding ? 'px-0 py-4 md:p-4' : 'p-4'}`}>
           {children}
         </div>
       </main>
 
-      {/* Footer */}
+      {/* Footer — fixed band at bottom; only list body scrolls above */}
       {footer && (
-        <footer className={`flex-none border-t border-slate-200/80 p-4 ${pageCanvasClass}`}>
+        <footer
+          className={`z-10 shrink-0 border-t border-slate-200/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-4 ${pageCanvasClass}`}
+        >
           {footer}
         </footer>
       )}
