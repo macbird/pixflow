@@ -71,6 +71,18 @@ Regularize hoje ou entre em contato conosco.`,
 
 export const OVERDUE_GENERIC_TEMPLATE_KEY = 'subscriptionOverdue';
 
+/** Single overdue window entry in persisted JSON. */
+export type OverdueChargeMessagesWindowJson = {
+  daysAfterDue: number;
+  templates: string[];
+};
+
+/** JSON shape stored in tenantBillingAutomationConfig.overdueMessageTemplates. */
+export type SerializedOverdueChargeMessages = Record<
+  string,
+  string[] | OverdueChargeMessagesWindowJson[]
+>;
+
 /**
  * Returns the persisted JSON key for an overdue reminder window template.
  */
@@ -163,8 +175,8 @@ function parseOverdueWindowEntry(value: unknown, fallbackDay: number): OverdueRe
  */
 export function serializeOverdueChargeMessages(
   overdue: OverdueChargeMessagesDto,
-): Record<string, unknown> {
-  const result: Record<string, unknown> = {
+): SerializedOverdueChargeMessages {
+  const result: SerializedOverdueChargeMessages = {
     [OVERDUE_GENERIC_TEMPLATE_KEY]: overdue.generic.templates,
     windows: overdue.windows.map((window) => ({
       daysAfterDue: window.daysAfterDue,
