@@ -32,8 +32,10 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
     </div>
   );
 
+  const footerBandClass = `border-t border-slate-200/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-4 ${pageCanvasClass}`;
+
   return (
-    <div className={`flex h-full min-h-0 flex-col overflow-hidden ${className} ${pageCanvasClass}`}>
+    <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${className} ${pageCanvasClass}`}>
       {/* Mobile Portal for Top Bar */}
       {portalNode && createPortal(headerContent, portalNode)}
 
@@ -45,16 +47,20 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
       )}
 
       {/* Main Content (Scrollable) */}
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <main
+        className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${
+          footer ? 'max-md:pb-[calc(4.5rem+env(safe-area-inset-bottom))]' : ''
+        }`}
+      >
         <div className={`${noPadding ? 'px-0 py-4 md:p-4' : 'p-4'}`}>
           {children}
         </div>
       </main>
 
-      {/* Footer — fixed band at bottom; only list body scrolls above */}
+      {/* Footer — pinned on mobile PWA; flex band on desktop */}
       {footer && (
         <footer
-          className={`z-10 shrink-0 border-t border-slate-200/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-4 ${pageCanvasClass}`}
+          className={`z-30 shrink-0 md:relative ${footerBandClass} max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:shadow-[0_-4px_12px_rgba(15,23,42,0.08)]`}
         >
           {footer}
         </footer>

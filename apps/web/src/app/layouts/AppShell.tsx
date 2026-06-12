@@ -112,7 +112,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           <div id="mobile-header-portal" className="flex-1 flex justify-between items-center ml-2" />
         </header>
 
-        <main className="flex-1 relative z-0 overflow-hidden focus:outline-none min-h-0">
+        <main className="relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden focus:outline-none">
           {children}
         </main>
         <PwaInstallBanner />

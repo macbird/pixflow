@@ -112,7 +112,7 @@ export const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }
           />
         </header>
 
-        <main className="flex-1 relative z-0 overflow-hidden focus:outline-none min-h-0">
+        <main className="relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden focus:outline-none">
           {children}
         </main>
       </div>
