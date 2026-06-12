@@ -17,6 +17,7 @@ import {
   type WhatsAppConnectionStatusValue,
   type TenantChargeMessagesSettingsDto,
   type BillingAutomationSettingsDto,
+  DEFAULT_OVERDUE_REMINDERS_SETTINGS,
 } from '@client-manager/shared';
 import {
   DEFAULT_CHARGE_MESSAGE_DELAY_MS,
@@ -57,6 +58,7 @@ const DEFAULT_AUTOMATION: BillingAutomationSettingsDto = {
   automationRunMinute: 0,
   autoCloseSubscriptionInvoices: false,
   closeSubscriptionInvoiceAfterDays: 30,
+  overdueReminders: { ...DEFAULT_OVERDUE_REMINDERS_SETTINGS },
 };
 
 function formatBrl(cents: number) {

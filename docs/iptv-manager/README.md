@@ -24,6 +24,7 @@ Documentação para implementar o sistema com **Cursor**, em **fases**, com **fr
 | [16-whatsapp-payment-notification-and-templates.md](./16-whatsapp-payment-notification-and-templates.md) | WhatsApp pós-pagamento + `payment_block` |
 | [17-saas-monthly-invoice-job.md](./17-saas-monthly-invoice-job.md) | Job mensal faturas SaaS |
 | [18-payment-delivery-hybrid-frozen.md](./18-payment-delivery-hybrid-frozen.md) | Híbrido PIX+link (congelado) |
+| [19-billing-overdue-reminder-automation.md](./19-billing-overdue-reminder-automation.md) | **Lembretes pós-vencimento (janelas 1/7/15) + bloqueio** |
 | [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) | **Progresso real da implementação** |
 | [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) | **Checklist de release (staging/prod)** |
 | [../CLIENTE-MANAGER-SPEC-TEMP.md](../../CLIENTE-MANAGER-SPEC-TEMP.md) | Especificação funcional completa |

@@ -276,6 +276,7 @@ flowchart TD
 | 16 | WhatsApp pós-pagamento + templates | [16](./16-whatsapp-payment-notification-and-templates.md) | 📋 Backlog |
 | 17 | Job mensal faturas SaaS | [17](./17-saas-monthly-invoice-job.md) | 📋 Backlog |
 | 18 | Pagamento híbrido (link) | [18](./18-payment-delivery-hybrid-frozen.md) | 🧊 Congelada |
+| 19 | Lembretes pós-vencimento (janelas 1/7/15) + bloqueio | [19](./19-billing-overdue-reminder-automation.md) | 📋 Especificação fechada |
 
 ### Plano: WhatsApp para o tenant (recebimentos)
 

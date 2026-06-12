@@ -375,6 +375,10 @@ model TenantBillingAutomationConfig {
   automationRunMinute   Int      @default(0)
   autoCloseSubscriptionInvoices Boolean @default(false)
   closeSubscriptionInvoiceAfterDays Int @default(30)
+  overdueRemindersEnabled       Boolean  @default(false)
+  overdueReminderDays           Int[]    @default([1, 7, 15])
+  overdueReminderFailureGraceDays Int    @default(1)
+  overdueMessageTemplates       Json?
   updatedAt             DateTime @updatedAt
 
   @@map("tenant_billing_automation_config")
@@ -428,8 +432,10 @@ model InvoiceChargeDelivery {
   providerMessageIds Json?
   success            Boolean  @default(true)
   errorMessage       String?
+  windowDaysAfterDue Int?
 
   @@index([invoiceId, sentAt])
+  @@index([invoiceId, source, windowDaysAfterDue])
   @@map("invoice_charge_deliveries")
 }
 

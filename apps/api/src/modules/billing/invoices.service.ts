@@ -61,6 +61,7 @@ export class InvoicesService {
       messagesCount: number;
       success: boolean;
       errorMessage: string | null;
+      windowDaysAfterDue: number | null;
     }>;
   }, tenantMessageConfig?: {
     chargeMessageTemplates: unknown;
@@ -127,6 +128,7 @@ export class InvoicesService {
             messagesCount: lastDelivery.messagesCount,
             success: lastDelivery.success,
             errorMessage: lastDelivery.errorMessage,
+            windowDaysAfterDue: lastDelivery.windowDaysAfterDue,
           }
         : null,
     };
@@ -260,6 +262,7 @@ export class InvoicesService {
             messagesCount: true,
             success: true,
             errorMessage: true,
+            windowDaysAfterDue: true,
           },
         },
       },

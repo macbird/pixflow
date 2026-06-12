@@ -1,14 +1,16 @@
-import type { AutomationChargeReportEntry } from '@client-manager/shared';
+import type { AutomationChargeReportEntry, OverdueReminderRunSummary } from '@client-manager/shared';
 import { prisma } from '../../core/database';
 import { billingCycleKeyFromDate } from './account-billing.util';
 import { isInvoicePastDue, startOfUtcDay } from './sync-overdue-invoices';
 import { BillingAutomationReportService } from './billing-automation-report.service';
 import { InvoiceChargeService } from './invoice-charge.service';
+import { OverdueReminderService } from './overdue-reminder.service';
 import { TenantBillingAutomationService } from './tenant-billing-automation.service';
 
 const invoiceChargeService = new InvoiceChargeService();
 const tenantBillingAutomationService = new TenantBillingAutomationService();
 const billingAutomationReportService = new BillingAutomationReportService();
+const overdueReminderService = new OverdueReminderService();
 
 export interface BillingAutomationRunSummary {
   tenantsProcessed: number;
@@ -18,6 +20,10 @@ export interface BillingAutomationRunSummary {
   chargesSkipped: number;
   invoicesAutoClosed: number;
   tenantReportsSent: number;
+  overdueRemindersSent: number;
+  overdueRemindersFailed: number;
+  overdueRemindersSkippedBlocked: number;
+  overdueRemindersSkippedNoPix: number;
   errors: string[];
 }
 
@@ -43,6 +49,10 @@ export class BillingAutomationService {
       chargesSkipped: 0,
       invoicesAutoClosed: 0,
       tenantReportsSent: 0,
+      overdueRemindersSent: 0,
+      overdueRemindersFailed: 0,
+      overdueRemindersSkippedBlocked: 0,
+      overdueRemindersSkippedNoPix: 0,
       errors: [],
     };
 
@@ -64,6 +74,10 @@ export class BillingAutomationService {
         summary.chargesSkipped += tenantSummary.chargesSkipped;
         summary.invoicesAutoClosed += tenantSummary.invoicesAutoClosed;
         summary.tenantReportsSent += tenantSummary.tenantReportsSent;
+        summary.overdueRemindersSent += tenantSummary.overdueRemindersSent;
+        summary.overdueRemindersFailed += tenantSummary.overdueRemindersFailed;
+        summary.overdueRemindersSkippedBlocked += tenantSummary.overdueRemindersSkippedBlocked;
+        summary.overdueRemindersSkippedNoPix += tenantSummary.overdueRemindersSkippedNoPix;
         summary.errors.push(...tenantSummary.errors);
       } catch (error) {
         summary.errors.push(
@@ -87,6 +101,10 @@ export class BillingAutomationService {
       chargesSkipped: 0,
       invoicesAutoClosed: 0,
       tenantReportsSent: 0,
+      overdueRemindersSent: 0,
+      overdueRemindersFailed: 0,
+      overdueRemindersSkippedBlocked: 0,
+      overdueRemindersSkippedNoPix: 0,
       errors: [],
     };
 
@@ -170,7 +188,11 @@ export class BillingAutomationService {
         }
 
         const alreadySent = await prisma.invoiceChargeDelivery.findFirst({
-          where: { invoiceId: invoice.id, success: true },
+          where: {
+            invoiceId: invoice.id,
+            success: true,
+            source: { in: ['manual', 'automation'] },
+          },
           orderBy: { sentAt: 'desc' },
         });
         if (alreadySent) {
@@ -200,6 +222,13 @@ export class BillingAutomationService {
     }
 
     if (config.sendWhatsapp) {
+      const overdueReminders = await overdueReminderService.runForTenant(accountId);
+      summary.overdueRemindersSent = overdueReminders.sent.length;
+      summary.overdueRemindersFailed = overdueReminders.failed.length;
+      summary.overdueRemindersSkippedBlocked = overdueReminders.skippedBlocked;
+      summary.overdueRemindersSkippedNoPix = overdueReminders.skippedNoPix;
+      summary.errors.push(...overdueReminders.errors);
+
       const reportResult = await billingAutomationReportService.sendTenantRunReport({
         accountId,
         charges: sentCharges,
@@ -208,6 +237,7 @@ export class BillingAutomationService {
         invoicesCreated: summary.invoicesCreated,
         errorsCount: summary.errors.length,
         runAt: runStartedAt,
+        overdueReminders,
       });
 
       if (reportResult.sent) {

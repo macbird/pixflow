@@ -165,6 +165,138 @@ export class InvoiceChargeService {
       phoneMasked: maskPhone(phone),
     };
   }
+
+  /**
+   * Sends an overdue reminder via WhatsApp using the existing PIX on the invoice.
+   * Does not create invoices or regenerate PIX.
+   */
+  async sendOverdueReminderViaWhatsApp(
+    invoiceId: string,
+    tenantId: string,
+    windowDaysAfterDue: number,
+    daysOverdue: number,
+  ) {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId, accountId: tenantId },
+      include: {
+        customer: { select: { id: true, name: true, phone: true, status: true } },
+        account: {
+          select: {
+            name: true,
+            phone: true,
+            users: { select: { name: true }, take: 1, orderBy: { createdAt: 'asc' } },
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      throw new InvoiceActionError('Fatura não encontrada', 'NOT_FOUND');
+    }
+
+    if (!isPayableInvoiceStatus(invoice.status as BillingInvoiceStatusValue)) {
+      throw new InvoiceActionError('Fatura não está elegível para lembrete', 'NOT_ALLOWED');
+    }
+
+    if (!invoice.pixCopyPaste?.trim()) {
+      throw new InvoiceActionError('PIX não disponível na fatura', 'NOT_ALLOWED');
+    }
+
+    if (invoice.customer?.status !== 'active') {
+      throw new InvoiceActionError('Cliente bloqueado ou inativo', 'NOT_ALLOWED');
+    }
+
+    const phone = resolvePayerPhone(invoice);
+    if (!phone) {
+      throw new InvoiceActionError(
+        'Telefone do cliente não cadastrado para envio via WhatsApp',
+        'NOT_ALLOWED',
+      );
+    }
+
+    const payerName =
+      invoice.customer?.name ?? invoice.account.users[0]?.name ?? invoice.account.name;
+
+    const { messages, delayMs } = await chargeMessageConfigLoader.buildOverdueMessages(
+      invoice.accountId,
+      {
+        payerName,
+        tenantName: invoice.account.name,
+        daysOverdue,
+        invoice: {
+          pixCopyPaste: invoice.pixCopyPaste,
+          amountCents: invoice.amountCents,
+          billingCycleKey: invoice.billingCycleKey,
+          dueDate: invoice.dueDate,
+        },
+      },
+      windowDaysAfterDue,
+    );
+
+    if (messages.length === 0) {
+      throw new InvoiceActionError(
+        'Nenhuma mensagem de lembrete configurada',
+        'NOT_ALLOWED',
+      );
+    }
+
+    let whatsapp;
+    try {
+      whatsapp = await whatsappFactory.getProvider(invoice.scope, invoice.accountId);
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : 'WhatsApp não configurado';
+      throw new InvoiceActionError(messageText, 'NOT_ALLOWED');
+    }
+
+    const providerMessageIds: string[] = [];
+    const source = 'automation_overdue';
+
+    try {
+      for (let index = 0; index < messages.length; index += 1) {
+        const result = await whatsapp.sendText({ phoneE164: phone, text: messages[index] });
+        providerMessageIds.push(result.providerMessageId);
+
+        if (index < messages.length - 1 && delayMs > 0) {
+          await sleep(delayMs);
+        }
+      }
+
+      await prisma.invoiceChargeDelivery.create({
+        data: {
+          invoiceId: invoice.id,
+          channel: 'whatsapp',
+          source,
+          windowDaysAfterDue,
+          messagesCount: messages.length,
+          providerMessageIds,
+          success: true,
+        },
+      });
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : 'Falha ao enviar WhatsApp';
+      await prisma.invoiceChargeDelivery.create({
+        data: {
+          invoiceId: invoice.id,
+          channel: 'whatsapp',
+          source,
+          windowDaysAfterDue,
+          messagesCount: providerMessageIds.length,
+          providerMessageIds,
+          success: false,
+          errorMessage: messageText,
+        },
+      });
+      throw new InvoiceActionError(messageText, 'CONFLICT');
+    }
+
+    return {
+      sent: true,
+      messagesCount: messages.length,
+      providerMessageId: providerMessageIds[providerMessageIds.length - 1] ?? null,
+      providerMessageIds,
+      phoneMasked: maskPhone(phone),
+    };
+  }
 }
 
 function resolvePayerPhone(invoice: {

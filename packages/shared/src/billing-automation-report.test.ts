@@ -42,4 +42,42 @@ describe('buildBillingAutomationReportMessage', () => {
 
     expect(message).toContain('Nenhuma cobrança WhatsApp enviada nesta execução.');
   });
+
+  it('includes overdue reminder section when provided', () => {
+    const message = buildBillingAutomationReportMessage({
+      tenantName: 'Toro TV',
+      runAt: new Date('2026-06-10T20:00:00.000Z'),
+      customersScanned: 0,
+      chargesSkipped: 0,
+      invoicesCreated: 0,
+      errorsCount: 1,
+      charges: [],
+      overdueReminders: {
+        sent: [
+          {
+            customerName: 'João Silva',
+            phoneMasked: '5535****54',
+            windowDaysAfterDue: 1,
+            amountCents: 3500,
+            dueDate: '2026-06-09',
+            messagesCount: 2,
+          },
+        ],
+        failed: [
+          {
+            customerName: 'Maria',
+            windowDaysAfterDue: 7,
+            reason: 'Telefone inválido',
+          },
+        ],
+        skippedBlocked: 2,
+        skippedNoPix: 1,
+      },
+    });
+
+    expect(message).toContain('Lembretes pós-vencimento:');
+    expect(message).toContain('D+1: 1');
+    expect(message).toContain('Maria (D+7): Telefone inválido');
+    expect(message).toContain('bloqueado: 2 | sem PIX: 1');
+  });
 });

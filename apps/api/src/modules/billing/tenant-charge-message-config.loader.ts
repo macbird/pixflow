@@ -2,6 +2,7 @@ import { prisma } from '../../core/database';
 import {
   buildChargeMessagesFromTemplates,
   resolveChargeMessageConfig,
+  resolveOverdueReminderTemplates,
   type ChargeMessageTemplateContext,
 } from '@client-manager/shared';
 import type { InvoiceKind } from '@prisma/client';
@@ -49,5 +50,28 @@ export class TenantChargeMessageConfigLoader {
     });
 
     return { messages, delayMs: resolved.delayMs };
+  }
+
+  /**
+   * Returns rendered overdue reminder messages for a D+N window.
+   */
+  async buildOverdueMessages(
+    accountId: string,
+    context: ChargeMessageTemplateContext,
+    windowDaysAfterDue: number,
+  ): Promise<{ messages: string[]; delayMs: number }> {
+    const row = await prisma.tenantBillingAutomationConfig.findUnique({
+      where: { accountId },
+    });
+
+    const templates = resolveOverdueReminderTemplates({
+      windowDaysAfterDue,
+      tenantOverdueTemplates: row?.overdueMessageTemplates,
+    });
+
+    const messages = buildChargeMessagesFromTemplates(templates, context);
+    const delayMs = row?.chargeMessageDelayMs ?? 1500;
+
+    return { messages, delayMs };
   }
 }

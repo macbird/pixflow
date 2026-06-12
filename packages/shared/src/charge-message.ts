@@ -12,6 +12,7 @@ export const CHARGE_MESSAGE_PLACEHOLDERS = [
   { key: '{{link}}', label: 'URL de checkout' },
   { key: '{{empresa}}', label: 'Nome do tenant' },
   { key: '{{descricao}}', label: 'Descrição da cobrança avulsa' },
+  { key: '{{dias_atraso}}', label: 'Dias em atraso (pós-vencimento)' },
 ] as const;
 
 export const DEFAULT_CHARGE_MESSAGE_TEMPLATES = [
@@ -31,6 +32,38 @@ Valor: {{valor}}
 Vencimento: {{vencimento}}`,
   '{{pix}}',
 ] as const;
+
+export const DEFAULT_OVERDUE_REMINDER_MESSAGE_TEMPLATES = [
+  `Olá, {{nome}}!
+
+Sua fatura de {{valor}} com vencimento em {{vencimento}} está em atraso há {{dias_atraso}} dia(s).
+Por favor, regularize o pagamento.`,
+  '{{pix}}',
+] as const;
+
+export const DEFAULT_OVERDUE_REMINDER_TEMPLATES_BY_WINDOW: Record<number, readonly string[]> = {
+  1: [
+    `Olá, {{nome}}!
+
+Notamos que sua fatura de {{valor}} (venc. {{vencimento}}) ainda não foi paga.
+Estamos há {{dias_atraso}} dia em atraso — regularize quando puder.`,
+    '{{pix}}',
+  ],
+  7: [
+    `Olá, {{nome}}!
+
+Sua cobrança de {{valor}} (venc. {{vencimento}}) segue em aberto há {{dias_atraso}} dias.
+Evite interrupção do serviço — pague via PIX abaixo.`,
+    '{{pix}}',
+  ],
+  15: [
+    `Olá, {{nome}}!
+
+Último aviso: fatura de {{valor}} (venc. {{vencimento}}) com {{dias_atraso}} dias de atraso.
+Regularize hoje ou entre em contato conosco.`,
+    '{{pix}}',
+  ],
+};
 
 export const DEFAULT_CHARGE_MESSAGE_DELAY_MS = 1500;
 
@@ -52,6 +85,7 @@ export interface ChargeMessageTemplateContext {
   payerName: string;
   tenantName: string;
   description?: string;
+  daysOverdue?: number;
   invoice: PaymentMessageInvoice;
 }
 
@@ -89,6 +123,8 @@ export function buildChargeMessagePlaceholderMap(
     '{{link}}': link,
     '{{empresa}}': context.tenantName,
     '{{descricao}}': context.description?.trim() ?? '',
+    '{{dias_atraso}}':
+      context.daysOverdue !== undefined ? String(context.daysOverdue) : '',
   };
 }
 
@@ -187,6 +223,33 @@ export function resolveChargeMessageConfig(params: {
     templates: parseChargeMessageTemplates(tenantTemplates, tenantFallback),
     delayMs: params.tenantDelayMs ?? DEFAULT_CHARGE_MESSAGE_DELAY_MS,
   };
+}
+
+/**
+ * Resolves overdue reminder templates for a specific window day (D+N).
+ */
+export function resolveOverdueReminderTemplates(params: {
+  windowDaysAfterDue: number;
+  tenantOverdueTemplates?: unknown;
+}): string[] {
+  const windowFallback =
+    DEFAULT_OVERDUE_REMINDER_TEMPLATES_BY_WINDOW[params.windowDaysAfterDue] ??
+    DEFAULT_OVERDUE_REMINDER_MESSAGE_TEMPLATES;
+
+  if (params.tenantOverdueTemplates && typeof params.tenantOverdueTemplates === 'object') {
+    const record = params.tenantOverdueTemplates as Record<string, unknown>;
+    const windowKey = `subscriptionOverdueDay${params.windowDaysAfterDue}`;
+    const genericKey = 'subscriptionOverdue';
+
+    if (record[windowKey] !== undefined) {
+      return parseChargeMessageTemplates(record[windowKey], windowFallback);
+    }
+    if (record[genericKey] !== undefined) {
+      return parseChargeMessageTemplates(record[genericKey], windowFallback);
+    }
+  }
+
+  return [...windowFallback];
 }
 
 /**

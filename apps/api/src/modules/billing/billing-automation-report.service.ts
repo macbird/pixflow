@@ -2,6 +2,7 @@ import {
   buildBillingAutomationReportMessage,
   normalizePhoneE164,
   type AutomationChargeReportEntry,
+  type OverdueReminderRunSummary,
 } from '@client-manager/shared';
 import { prisma } from '../../core/database';
 import { WhatsAppProviderFactory } from '../../integrations/whatsapp/whatsapp-provider.factory';
@@ -16,6 +17,7 @@ export interface BillingAutomationReportInput {
   invoicesCreated: number;
   errorsCount: number;
   runAt?: Date;
+  overdueReminders?: OverdueReminderRunSummary;
 }
 
 /**
@@ -60,6 +62,7 @@ export class BillingAutomationReportService {
       chargesSkipped: input.chargesSkipped,
       invoicesCreated: input.invoicesCreated,
       errorsCount: input.errorsCount,
+      overdueReminders: input.overdueReminders,
     });
 
     try {

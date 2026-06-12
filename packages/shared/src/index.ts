@@ -17,6 +17,7 @@ export * from './domain-errors';
 export * from './billing-schemas';
 export * from './billing-automation';
 export * from './billing-automation-report';
+export * from './overdue-reminder.util';
 export * from './schemas';
 export * from './customer-status';
 export * from './customer-configuration-warning';
