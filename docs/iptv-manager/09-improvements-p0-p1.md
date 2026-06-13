@@ -13,22 +13,6 @@ Checklist de melhorias **recomendadas** para incluir na Fase 1 e fases de billin
 
 ## P0 — Obrigatório recomendado (Fase 1)
 
-### P0.1 Seed de tenant demo
-
-| Item | Detalhe |
-|------|---------|
-| **O quê** | Script `prisma/seed.ts`: 1 tenant, 1 owner, planos, servidores, 3–5 clientes com conexões |
-| **Por quê** | Testar fluxo D-N, PIX, renovações sem cadastro manual |
-| **Onde** | Passo 1 ou 8 |
-| **Comando** | `pnpm db:seed` |
-
-```bash
-# package.json script
-"db:seed": "prisma db seed"
-```
-
----
-
 ### P0.2 Health check
 
 | Item | Detalhe |
@@ -60,17 +44,18 @@ Checklist de melhorias **recomendadas** para incluir na Fase 1 e fases de billin
 | **Por quê** | Suporte, rastreio, disputa |
 | **Onde** | Módulo `audit` — Passo 6–7 |
 | **Campos** | `tenant_id`, `account_user_id`, `entity_type`, `action`, `old/new` jsonb |
+| **Status** | ✅ API `GET /api/logs` + UI `/logs` |
 
 ---
 
-### P0.5 Copiar PIX + link WhatsApp no mobile
+### P0.5 Copiar PIX no mobile
 
 | Item | Detalhe |
 |------|---------|
-| **O quê** | Botões no card/detalhe: **Copiar PIX** (`navigator.clipboard`) + **WhatsApp** (`https://wa.me/55{digits}`) |
+| **O quê** | Botão **Copiar PIX** no detalhe da fatura (`navigator.clipboard`) + toast |
 | **Por quê** | Operação no celular com 1–2 toques |
-| **Onde** | Features `customers`, `billing`, `renewals` — Passo 3–6 |
-| **UX** | Toast sonner: “Copiado!” |
+| **Onde** | Detalhe fatura (`InvoiceDetailPage`) |
+| **Fora de escopo** | `wa.me` nos cards da listagem; wa.me em clientes/renovações |
 
 ---
 
@@ -78,15 +63,10 @@ Checklist de melhorias **recomendadas** para incluir na Fase 1 e fases de billin
 
 | Item | Detalhe |
 |------|---------|
-| **O quê** | Zod: telefone obrigatório; normalizar para E.164 (ex.: `+5511999999999`) |
+| **O quê** | Schemas Zod reutilizáveis (`requiredPhoneE164Schema`, `optionalPhoneE164Schema`) em `packages/shared/src/phone-e164.ts` |
 | **Por quê** | WhatsApp e relatórios consistentes |
-| **Onde** | `packages/shared` + `customers` service — Passo 3 |
-| **Lib opcional** | `libphonenumber-js` ou regex BR + DDI 55 |
-
-```typescript
-// packages/shared — exemplo
-phone: z.string().min(10).transform(normalizeBrazilPhoneE164)
-```
+| **Onde** | Cliente, conta admin, register, Evolution connect/test |
+| **Status** | ✅ Universalizado via `normalizePhoneE164` |
 
 ---
 
@@ -137,14 +117,14 @@ phone: z.string().min(10).transform(normalizeBrazilPhoneE164)
 
 ---
 
-### P1.3 Busca global (nome / telefone / MAC)
+### P1.3 Busca global (nome / telefone)
 
 | Item | Detalhe |
 |------|---------|
-| **O quê** | Campo busca na lista clientes: `q` busca em `name`, `phone`, `connection.mac_address` |
-| **Por quê** | Achar cliente rápido no celular |
-| **Onde** | API `GET /customers?q=` — Passo 3 |
-| **UX** | Debounce 300ms; sticky no topo |
+| **O quê** | Campo busca na lista clientes: filtro em `name` e `phone` |
+| **Fora de escopo** | Busca por MAC (`connection.mac_address`) |
+| **Onde** | API `GET /customers?filter=` — Passo 3 |
+| **Status** | ✅ Nome + telefone |
 
 ---
 
@@ -184,11 +164,10 @@ phone: z.string().min(10).transform(normalizeBrazilPhoneE164)
 
 | Melhoria | Fase / passo |
 |----------|----------------|
-| P0.1 Seed | 1 ou 8 |
 | P0.2 Health | 1 |
 | P0.3 Webhook idempotência | **2.5** (platform) + **3** (tenant) |
 | P0.4 Audit log | 5–6 (após billing) |
-| P0.5 Copiar PIX / wa.me | **2.5** (fatura SaaS) + **3–5** (cliente) |
+| P0.5 Copiar PIX + wa.me | **3** (detalhe fatura; cards listagem fora de escopo) |
 | P0.6 Telefone E.164 | 1 (passo 3) |
 | P0.7 Backup DB | 8 |
 | P1.1 PWA shortcuts | 1 / 8 |
@@ -204,19 +183,18 @@ phone: z.string().min(10).transform(normalizeBrazilPhoneE164)
 
 ### P0
 
-- [ ] P0.1 Seed tenant demo
-- [ ] P0.2 `GET /api/health`
-- [ ] P0.3 Idempotência webhook PIX
-- [ ] P0.4 Audit log ações críticas
-- [ ] P0.5 Copiar PIX + wa.me + toast
-- [ ] P0.6 Telefone E.164 obrigatório
+- [x] P0.2 `GET /api/health` (inclui checagem DB)
+- [x] P0.3 Idempotência webhook PIX
+- [x] P0.4 Audit log ações críticas (módulo `audit`, UI `/logs`)
+- [x] P0.5 Copiar PIX no detalhe fatura (wa.me / cards listagem fora de escopo)
+- [x] P0.6 Telefone E.164 (`phone-e164.ts` + schemas Zod)
 - [ ] P0.7 Backup Postgres (cron)
 
 ### P1
 
 - [ ] P1.1 Manifest shortcuts PWA
 - [ ] P1.2 Pull-to-refresh listas
-- [ ] P1.3 Busca nome/telefone/MAC
+- [x] P1.3 Busca nome/telefone (MAC fora de escopo)
 - [ ] P1.4 Dashboard → renovações pendentes
 - [ ] P1.5 Notas no card cliente
 - [ ] P1.6 Pagamentos no detalhe cliente
@@ -229,7 +207,7 @@ phone: z.string().min(10).transform(normalizeBrazilPhoneE164)
 
 ## Prompt Cursor (lote P0 — geral)
 
-> Implemente melhorias P0 de docs/client-manager/09-improvements-p0-p1.md no escopo atual: health check (+ DB), seed, telefone E.164, audit log quando billing existir. Modular, sem monolito.
+> Implemente melhorias P0 de docs/client-manager/09-improvements-p0-p1.md no escopo atual: health check (+ DB), telefone E.164, audit log quando billing existir. Modular, sem monolito.
 
 ## Prompt Cursor (lote P1)
 

@@ -170,7 +170,7 @@ Job de teste dispara cobrança para cliente com vencimento simulado.
 
 ### Front
 
-- [ ] `/renewals` — fila + “Marcar renovado no servidor”
+- [x] `/activations` — fila + “Marcar renovado no servidor” (alias `/renewals`)
 - [ ] **P0.5** wa.me + copiar telefone no card renovação
 - [ ] **P1.2** Pull-to-refresh em `/renewals`
 - [ ] **P1.4** Card KPI “Pendentes renovação” no dashboard (ou aqui como stub)
@@ -191,7 +191,7 @@ Após PIX confirmado, item aparece em `/renewals`; marcar como renovado muda sta
 ### Front
 
 - [ ] `/` dashboard (home) + **P1.4** KPI renovações pendentes → `/renewals`
-- [ ] `/logs` + **P0.4** audit log nas ações críticas
+- [x] `/logs` + **P0.4** audit log nas ações críticas
 - [ ] `/settings` — **mesmo layout que admin**, porém: provider PIX/WhatsApp do **revendedor**; **preço do app = read-only** (vem do plano SaaS); preço dos **clientes** continua em `/plans`
 
 ### Critério de pronto
@@ -208,7 +208,6 @@ Fase 1 utilizável em produção no VPS (1 revendedor real).
 - [ ] **P0.7** Backup Postgres (`scripts/backup-db.sh` + cron)
 - [ ] Lighthouse: PWA installable + teste instalação Android/iOS
 - [ ] Revisão responsiva nas 5 telas principais (clientes, renovações, dashboard, login, settings)
-- [ ] **P0.1** Seed tenant demo (`pnpm db:seed`)
 - [ ] Revisar checklist [09-improvements-p0-p1.md](./09-improvements-p0-p1.md)
 
 ---

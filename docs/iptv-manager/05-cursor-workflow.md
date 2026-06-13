@@ -37,6 +37,7 @@ alwaysApply: true
 - PIX / pagamento: use `PaymentProvider` adapter only (`emv` ou `checkout_link`); no direct PSP calls outside integrations/payment. Ver docs/iptv-manager/03-integrations-pix-whatsapp.md.
 - WhatsApp: use WhatsAppProvider adapter only.
 - Language: user-facing app strings PT-BR; code, commits, javadoc/comments EN.
+- No corporate copyright headers, @author, @since, or @creationDate blocks — see docs/iptv-manager/21-coding-conventions.md.
 - Do not implement Phase 2 admin routes until Phase 1 checklist is done.
 - Frontend MUST be responsive (mobile-first) and PWA via vite-plugin-pwa; follow docs/client-manager/06-pwa-responsive.md.
 - Use AppShell: desktop sidebar, mobile drawer/bottom nav; tables become cards on small screens.

@@ -69,7 +69,7 @@ Executar com um usuário tenant real ou de staging.
 
 | # | Fluxo | OK |
 |---|-------|:--:|
-| 5.1 | `GET /health` → `{ status: 'ok' }` | ☐ |
+| 5.1 | `GET /health` → `{ status: 'ok', db: 'ok' }` (503 se DB falhar) | ☐ |
 | 5.2 | Login tenant → redireciona para `/dashboard` | ☐ |
 | 5.3 | Dashboard carrega KPIs e próximos vencimentos | ☐ |
 | 5.4 | Listar clientes (paginação anterior/próximo) | ☐ |

@@ -1,8 +1,8 @@
 # Feature 14 — Painel admin (overhaul)
 
-**Status:** 📋 Próxima feature após Feature 13  
+**Status:** ✅ Concluída (revisão 13/06/2026)  
 **Prioridade:** Alta  
-**Última revisão:** 11/06/2026  
+**Última revisão:** 13/06/2026  
 
 Relacionado: [02-phase-2-admin-panel.md](./02-phase-2-admin-panel.md) · [10-billing-dual-layer.md](./10-billing-dual-layer.md) · [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
 
@@ -62,7 +62,7 @@ Consolidar e corrigir o **painel admin da plataforma** (`/admin/*`) para operaç
 
 ## Critérios de aceite
 
-- [ ] Criar/editar conta com identificador inválido → mensagem clara no toast/campo.
-- [ ] Listagem de faturas SaaS filtra por `canceled` sem perder registro.
-- [ ] Admin settings salva credencial MP com mensagem de erro real se token inválido.
-- [ ] Dashboard exibe KPIs sem regressão.
+- [x] Criar/editar conta com identificador inválido → mensagem clara no toast/campo (Zod + `getApiErrorMessage`).
+- [x] Listagem de faturas SaaS filtra por `canceled` (modal de filtros + link no dashboard).
+- [x] Admin settings salva credencial MP com mensagem de erro real se token inválido.
+- [x] Dashboard exibe KPIs + cards de saúde operacional sem regressão.
