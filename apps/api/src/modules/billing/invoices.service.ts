@@ -474,6 +474,7 @@ export class InvoicesService {
       paymentMethod?: string;
       paymentNotes?: string;
     },
+    accountUserId?: string | null,
   ) {
     if (!Number.isInteger(data.amountCents) || data.amountCents <= 0) {
       throw new InvoiceActionError('Valor inválido', 'NOT_ALLOWED');
@@ -543,6 +544,7 @@ export class InvoicesService {
           method: data.paymentMethod ?? 'cash',
           source: 'manual',
           notes: data.paymentNotes,
+          accountUserId,
         });
       }
 
@@ -599,7 +601,7 @@ export class InvoicesService {
   }
 
   /**
-   * Generates PIX copia e cola via configured PSP (stub when credentials are missing).
+   * Generates PIX copia e cola via configured PSP (Mercado Pago when credentials are present).
    */
   async generatePayment(invoiceId: string, tenantId?: string) {
     return paymentGeneration.generatePayment(invoiceId, tenantId);
@@ -608,7 +610,7 @@ export class InvoicesService {
   async markPaidManual(
     invoiceId: string,
     tenantId?: string,
-    options?: { method?: string; notes?: string; paidAt?: string },
+    options?: { method?: string; notes?: string; paidAt?: string; accountUserId?: string | null },
   ) {
     const invoice = await prisma.invoice.findFirst({
       where: {
@@ -630,6 +632,7 @@ export class InvoicesService {
       source: 'manual',
       notes: options?.notes,
       paidAt: options?.paidAt ? new Date(options.paidAt) : undefined,
+      accountUserId: options?.accountUserId,
     });
   }
 }

@@ -12,15 +12,17 @@ export async function tenantsRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticateAdmin);
 
   app.get('/', async (request) => {
-    const { page, pageSize, filter } = request.query as {
+    const { page, pageSize, filter, status } = request.query as {
       page?: string;
       pageSize?: string;
       filter?: string;
+      status?: string;
     };
     return await tenantsService.list(
       parseInt(page || '1', 10),
       parseInt(pageSize || '10', 10),
       filter || '',
+      status,
     );
   });
 

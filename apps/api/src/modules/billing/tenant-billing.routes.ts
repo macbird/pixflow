@@ -1,12 +1,15 @@
 import { FastifyInstance } from 'fastify';
 import { createManualInvoiceSchema, registerPaymentSchema, tenantChargeMessagesSettingsSchema, billingAutomationSettingsSchema, updateInvoiceChargeMessagesSchema } from '@client-manager/shared';
 import { requireTenantId } from '../../core/middleware/require-tenant';
+import { resolveActorUserId } from '../../core/utils/actor-user-id';
 import { sendApiError, sendNotFound, sendValidationError } from '../../core/errors/send-api-error';
 import { TenantSettingsService } from './tenant-settings.service';
 import { TenantPaymentSettingsService } from './tenant-payment-settings.service';
 import { TenantChargeMessageService } from './tenant-charge-message.service';
 import { TenantBillingAutomationService } from './tenant-billing-automation.service';
 import { BillingAutomationPreviewService } from './billing-automation-preview.service';
+import { BillingJobRunService } from './billing-job-run.service';
+import { getBillingAutomationSchedulerMeta } from './billing-scheduler.util';
 import { InvoicesService } from './invoices.service';
 import { InvoiceChargeService } from './invoice-charge.service';
 import { PaymentsService } from './payments.service';
@@ -29,6 +32,7 @@ const tenantPaymentSettings = new TenantPaymentSettingsService();
 const tenantChargeMessageService = new TenantChargeMessageService();
 const tenantBillingAutomationService = new TenantBillingAutomationService();
 const billingAutomationPreviewService = new BillingAutomationPreviewService();
+const billingJobRunService = new BillingJobRunService();
 const invoicesService = new InvoicesService();
 const invoiceChargeService = new InvoiceChargeService();
 const paymentsService = new PaymentsService();
@@ -117,6 +121,31 @@ export async function tenantBillingRoutes(app: FastifyInstance) {
     return billingAutomationPreviewService.getPreview(tenantId, { scenario });
   });
 
+  app.get('/settings/billing-automation/scheduler-meta', async () =>
+    getBillingAutomationSchedulerMeta(),
+  );
+
+  app.get('/settings/billing-automation/global-last-run', async () =>
+    billingJobRunService.getLastGlobalRun(),
+  );
+
+  app.get('/customers/:customerId/invoices', async (request, reply) => {
+    const tenantId = requireTenantId(request, reply);
+    if (!tenantId) return;
+
+    const { customerId } = request.params as { customerId: string };
+    const { page, pageSize } = request.query as { page?: string; pageSize?: string };
+
+    return invoicesService.list(
+      'tenant',
+      tenantId,
+      parseInt(page || '1', 10),
+      parseInt(pageSize || '10', 10),
+      '',
+      { customerId },
+    );
+  });
+
   app.get('/settings/subscription', async (request, reply) => {
     const tenantId = requireTenantId(request, reply);
     if (!tenantId) return;
@@ -196,7 +225,7 @@ export async function tenantBillingRoutes(app: FastifyInstance) {
     }
 
     try {
-      return await invoicesService.createManual(tenantId, parsed.data);
+      return await invoicesService.createManual(tenantId, parsed.data, resolveActorUserId(request));
     } catch (error) {
       return handleInvoiceActionError(reply, error);
     }
@@ -293,7 +322,12 @@ export async function tenantBillingRoutes(app: FastifyInstance) {
     if (!tenantId) return;
     const { id } = request.params as { id: string };
     try {
-      return await invoiceChargeService.sendChargeViaWhatsApp(id, tenantId);
+      return await invoiceChargeService.sendChargeViaWhatsApp(
+        id,
+        tenantId,
+        'manual',
+        resolveActorUserId(request),
+      );
     } catch (error) {
       return handleInvoiceActionError(reply, error);
     }
@@ -305,7 +339,10 @@ export async function tenantBillingRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as { method?: string; notes?: string; paidAt?: string };
     try {
-      return await invoicesService.markPaidManual(id, tenantId, body);
+      return await invoicesService.markPaidManual(id, tenantId, {
+        ...body,
+        accountUserId: resolveActorUserId(request),
+      });
     } catch (error) {
       return sendApiError(reply, error);
     }
@@ -326,6 +363,7 @@ export async function tenantBillingRoutes(app: FastifyInstance) {
         method: parsed.data.method,
         notes: parsed.data.notes,
         paidAt: parsed.data.paidAt,
+        accountUserId: resolveActorUserId(request),
       });
     } catch (error) {
       return sendApiError(reply, error);

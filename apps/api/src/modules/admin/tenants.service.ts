@@ -52,29 +52,34 @@ function mapSubscription(
   };
 }
 
-function mapAccount(account: {
-  id: string;
-  name: string;
-  slug: string;
-  status: string;
-  phone: string | null;
-  planSaas: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  users: Array<{
+function mapAccount(
+  account: {
     id: string;
     name: string;
-    email: string;
-    role: string;
-    passwordResetRequired: boolean;
-  }>;
-  subscription: Parameters<typeof mapSubscription>[0];
-}) {
+    slug: string;
+    status: string;
+    phone: string | null;
+    planSaas: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    users: Array<{
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      passwordResetRequired: boolean;
+    }>;
+    subscription: Parameters<typeof mapSubscription>[0];
+  },
+  paymentConfigured = false,
+) {
   return {
     id: account.id,
     name: account.name,
     slug: account.slug,
+    phone: account.phone,
     status: account.status as 'active' | 'inactive',
+    paymentConfigured,
     users: account.users,
     subscription: mapSubscription(account.subscription),
   };
@@ -97,28 +102,54 @@ async function resolveDefaultPlatformPlanId(tx: Pick<typeof prisma, 'platformPla
   return created.id;
 }
 
+async function resolvePlatformPlanId(
+  tx: Pick<typeof prisma, 'platformPlan'>,
+  platformPlanId?: string,
+) {
+  if (!platformPlanId) {
+    return resolveDefaultPlatformPlanId(tx);
+  }
+
+  const plan = await tx.platformPlan.findFirst({
+    where: { id: platformPlanId, active: true },
+  });
+  if (!plan) {
+    throw new ApiBusinessError(
+      'Plano SaaS não encontrado ou inativo',
+      API_ERROR_CODES.NOT_FOUND,
+      404,
+    );
+  }
+  return plan.id;
+}
+
 export class TenantsService {
-  async list(page: number, pageSize: number, filter: string) {
+  async list(page: number, pageSize: number, filter: string, statusFilter?: string) {
     const skip = (page - 1) * pageSize;
     const trimmed = filter.trim();
-    const where = trimmed
-      ? {
-          OR: [
-            { name: { contains: trimmed, mode: 'insensitive' as const } },
-            { slug: { contains: trimmed, mode: 'insensitive' as const } },
-            {
-              users: {
-                some: {
-                  OR: [
-                    { name: { contains: trimmed, mode: 'insensitive' as const } },
-                    { email: { contains: trimmed, mode: 'insensitive' as const } },
-                  ],
+    const where = {
+      ...(statusFilter === 'active' || statusFilter === 'inactive'
+        ? { status: statusFilter as 'active' | 'inactive' }
+        : {}),
+      ...(trimmed
+        ? {
+            OR: [
+              { name: { contains: trimmed, mode: 'insensitive' as const } },
+              { slug: { contains: trimmed, mode: 'insensitive' as const } },
+              {
+                users: {
+                  some: {
+                    OR: [
+                      { name: { contains: trimmed, mode: 'insensitive' as const } },
+                      { email: { contains: trimmed, mode: 'insensitive' as const } },
+                    ],
+                  },
                 },
               },
-            },
-          ],
-        }
-      : {};
+            ],
+          }
+        : {}),
+    };
 
     const [rows, total] = await Promise.all([
       prisma.account.findMany({
@@ -131,7 +162,22 @@ export class TenantsService {
       prisma.account.count({ where }),
     ]);
 
-    return { data: rows.map(mapAccount), total };
+    const accountIds = rows.map((row) => row.id);
+    const credentials =
+      accountIds.length === 0
+        ? []
+        : await prisma.tenantPaymentCredential.findMany({
+            where: { accountId: { in: accountIds }, active: true },
+            select: { accountId: true, apiKey: true },
+          });
+    const paymentConfiguredIds = new Set(
+      credentials.filter((row) => Boolean(row.apiKey)).map((row) => row.accountId),
+    );
+
+    return {
+      data: rows.map((row) => mapAccount(row, paymentConfiguredIds.has(row.id))),
+      total,
+    };
   }
 
   async findById(id: string) {
@@ -139,7 +185,14 @@ export class TenantsService {
       where: { id },
       include: accountListInclude,
     });
-    return account ? mapAccount(account) : null;
+    if (!account) return null;
+
+    const credential = await prisma.tenantPaymentCredential.findFirst({
+      where: { accountId: id, active: true, apiKey: { not: null } },
+      select: { id: true },
+    });
+
+    return mapAccount(account, Boolean(credential));
   }
 
   async create(input: {
@@ -149,6 +202,8 @@ export class TenantsService {
     ownerName: string;
     initialPassword?: string;
     dueDate: string;
+    platformPlanId?: string;
+    phone?: string;
   }) {
     const slug = input.slug;
     const initialPassword = input.initialPassword || 'Mudar123!';
@@ -158,13 +213,14 @@ export class TenantsService {
 
     try {
       return await prisma.$transaction(async (tx) => {
-      const platformPlanId = await resolveDefaultPlatformPlanId(tx);
+      const platformPlanId = await resolvePlatformPlanId(tx, input.platformPlanId);
 
       const account = await tx.account.create({
         data: {
           name: input.name,
           slug,
           status: 'active',
+          phone: input.phone?.trim() || null,
         },
       });
 
@@ -213,7 +269,7 @@ export class TenantsService {
 
   async update(
     id: string,
-    input: { status?: 'active' | 'inactive'; dueDate?: string },
+    input: { status?: 'active' | 'inactive'; dueDate?: string; platformPlanId?: string; phone?: string | null },
   ) {
     const account = await prisma.account.findUnique({ where: { id } });
     if (!account) {
@@ -227,10 +283,28 @@ export class TenantsService {
       });
     }
 
-    if (input.dueDate !== undefined) {
-      const nextDueDate = parseDueDateInput(input.dueDate);
+    if (input.phone !== undefined) {
+      await prisma.account.update({
+        where: { id },
+        data: { phone: input.phone?.trim() || null },
+      });
+    }
+
+    if (input.dueDate !== undefined || input.platformPlanId !== undefined) {
+      const subscription = await prisma.accountSubscription.findUnique({
+        where: { accountId: id },
+      });
+      const nextDueDate =
+        input.dueDate !== undefined
+          ? parseDueDateInput(input.dueDate)
+          : subscription?.nextDueDate ?? defaultNextDueDate();
       const dueDay = dueDayFromDate(nextDueDate);
-      const platformPlanId = await resolveDefaultPlatformPlanId(prisma);
+      const platformPlanId =
+        input.platformPlanId !== undefined
+          ? await resolvePlatformPlanId(prisma, input.platformPlanId)
+          : subscription
+            ? subscription.platformPlanId
+            : await resolveDefaultPlatformPlanId(prisma);
 
       await prisma.accountSubscription.upsert({
         where: { accountId: id },
@@ -242,6 +316,7 @@ export class TenantsService {
           status: input.status === 'inactive' ? 'past_due' : 'active',
         },
         update: {
+          platformPlanId,
           dueDay,
           nextDueDate,
         },
