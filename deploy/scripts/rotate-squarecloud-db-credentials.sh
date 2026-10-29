@@ -6,6 +6,7 @@
 #   bash deploy/scripts/rotate-squarecloud-db-credentials.sh
 #
 # Optional: RESET_PASSWORD=1 to call Square Cloud password reset API first.
+# Optional: RESET_CERTIFICATE=1 to also rotate the TLS client certificate.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -42,6 +43,15 @@ else
     echo "Set DATABASE_URL or RESET_PASSWORD=1" >&2
     exit 1
   fi
+fi
+
+if [ "${RESET_CERTIFICATE:-0}" = "1" ]; then
+  if [ "${RESET_PASSWORD:-0}" = "1" ]; then
+    echo "==> Waiting ${SQUARE_CLOUD_RESET_COOLDOWN}s for reset rate limit"
+    sleep "${SQUARE_CLOUD_RESET_COOLDOWN}"
+  fi
+  echo "==> Rotating TLS client certificate via API"
+  sqcloud_reset_certificate "${SQUARE_CLOUD_DATABASE_ID}"
 fi
 
 echo "==> Fetching certificate"

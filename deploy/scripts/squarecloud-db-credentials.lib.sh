@@ -15,6 +15,9 @@
 
 SQUARE_CLOUD_API_BASE="${SQUARE_CLOUD_API_BASE:-https://api.squarecloud.app/v2}"
 SQUARE_CLOUD_P12_PASSWORD="${SQUARE_CLOUD_P12_PASSWORD:-squarecloud}"
+# Reset endpoints are rate-limited to 1 every 3s per user; wait a bit longer
+# between consecutive resets (e.g. password then certificate).
+SQUARE_CLOUD_RESET_COOLDOWN="${SQUARE_CLOUD_RESET_COOLDOWN:-4}"
 
 # Directory of this library, so callers can be invoked from anywhere.
 SQUARE_CLOUD_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -51,6 +54,33 @@ sqcloud_reset_db_password() {
     return 1
   fi
   printf '%s' "$password"
+}
+
+# sqcloud_reset_certificate <database_id>
+# Rotates the TLS certificate via the Square Cloud API. The API returns only a
+# success status; the new certificate must be fetched afterwards with
+# sqcloud_write_client_p12. The database must be running.
+sqcloud_reset_certificate() {
+  local db_id="$1"
+  if [ -z "$db_id" ]; then
+    echo "::error::sqcloud_reset_certificate: missing database id" >&2
+    return 1
+  fi
+  sqcloud_require_token || return 1
+
+  local reset_json status
+  reset_json="$(curl -sS -m 30 -X POST \
+    -H "Authorization: ${SQUARE_CLOUD_API_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d '{"reset":"certificate"}' \
+    "${SQUARE_CLOUD_API_BASE}/databases/${db_id}/credentials/reset")"
+
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))' <<<"$reset_json" 2>/dev/null || true)"
+  if [ "$status" != "success" ]; then
+    echo "::error::Square Cloud certificate reset failed" >&2
+    echo "$reset_json" >&2
+    return 1
+  fi
 }
 
 # sqcloud_write_client_p12 <database_id> <output_p12_path>

@@ -34,6 +34,15 @@ if [ -n "${SQUARE_CLOUD_API_TOKEN:-}" ] && [ -n "${SQUARE_CLOUD_DATABASE_ID:-}" 
   echo "==> Resetting Square Cloud DB password"
   DB_PASS="$(sqcloud_reset_db_password "${SQUARE_CLOUD_DATABASE_ID}")"
 
+  # The TLS client certificate can also be invalidated by a rotation, so
+  # regenerate it by default. Resets are rate-limited to 1 every 3s per user, so
+  # wait before the second reset. Set SQUARE_CLOUD_DB_RESET_CERT=0 to skip.
+  if [ "${SQUARE_CLOUD_DB_RESET_CERT:-1}" != "0" ]; then
+    echo "==> Regenerating TLS client certificate (waiting ${SQUARE_CLOUD_RESET_COOLDOWN}s for reset rate limit)"
+    sleep "${SQUARE_CLOUD_RESET_COOLDOWN}"
+    sqcloud_reset_certificate "${SQUARE_CLOUD_DATABASE_ID}"
+  fi
+
   echo "==> Fetching current client certificate"
   sqcloud_write_client_p12 "${SQUARE_CLOUD_DATABASE_ID}" client.p12
   CLIENT_P12_BASE64="$(base64 -w 0 client.p12 2>/dev/null || base64 client.p12 | tr -d '\n')"
