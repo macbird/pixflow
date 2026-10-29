@@ -5,6 +5,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+# shellcheck source=deploy/scripts/squarecloud-db-credentials.lib.sh
+. "${ROOT_DIR}/deploy/scripts/squarecloud-db-credentials.lib.sh"
+
 require_env() {
   local name="$1"
   if [ -z "${!name:-}" ]; then
@@ -13,9 +16,37 @@ require_env() {
   fi
 }
 
-require_env DATABASE_URL
-require_env CLIENT_P12_BASE64
 require_env JWT_SECRET
+
+# Autoprovision mode: when a Square Cloud API token and database id are provided,
+# derive DATABASE_URL + client.p12 live from the API instead of relying on the
+# hand-maintained DATABASE_URL / CLIENT_P12_BASE64 secrets. This makes deploys
+# immune to Square Cloud password rotation — the stable API token mints fresh
+# credentials every run, so a rotated password can no longer take the app down.
+# When the inputs are absent, the legacy secret-based path below is used.
+if [ -n "${SQUARE_CLOUD_API_TOKEN:-}" ] && [ -n "${SQUARE_CLOUD_DATABASE_ID:-}" ]; then
+  echo "==> Autoprovisioning DB credentials from Square Cloud API (database ${SQUARE_CLOUD_DATABASE_ID})"
+  SQUARE_CLOUD_DB_HOST="${SQUARE_CLOUD_DB_HOST:-square-cloud-db-${SQUARE_CLOUD_DATABASE_ID}.squareweb.app}"
+  SQUARE_CLOUD_DB_PORT="${SQUARE_CLOUD_DB_PORT:-7247}"
+  SQUARE_CLOUD_DB_NAME="${SQUARE_CLOUD_DB_NAME:-squarecloud}"
+  SQUARE_CLOUD_DB_USER="${SQUARE_CLOUD_DB_USER:-squarecloud}"
+
+  echo "==> Resetting Square Cloud DB password"
+  DB_PASS="$(sqcloud_reset_db_password "${SQUARE_CLOUD_DATABASE_ID}")"
+
+  echo "==> Fetching current client certificate"
+  sqcloud_write_client_p12 "${SQUARE_CLOUD_DATABASE_ID}" client.p12
+  CLIENT_P12_BASE64="$(base64 -w 0 client.p12 2>/dev/null || base64 client.p12 | tr -d '\n')"
+  export CLIENT_P12_BASE64
+
+  DATABASE_URL="$(sqcloud_build_database_url "${DB_PASS}" "${SQUARE_CLOUD_DB_HOST}" \
+    "${SQUARE_CLOUD_DB_PORT}" "${SQUARE_CLOUD_DB_NAME}" "${SQUARE_CLOUD_DB_USER}")"
+  export DATABASE_URL
+  echo "==> Autoprovision complete (host ${SQUARE_CLOUD_DB_HOST})"
+else
+  require_env DATABASE_URL
+  require_env CLIENT_P12_BASE64
+fi
 
 API_PUBLIC_BASE_URL="${API_PUBLIC_BASE_URL:-https://pixflow.squareweb.app}"
 EVOLUTION_BASE_URL="${EVOLUTION_BASE_URL:-https://evolution-pixflow.squareweb.app}"

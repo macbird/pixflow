@@ -11,6 +11,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+# shellcheck source=deploy/scripts/squarecloud-db-credentials.lib.sh
+. "${ROOT_DIR}/deploy/scripts/squarecloud-db-credentials.lib.sh"
+
 require_env() {
   local name="$1"
   if [ -z "${!name:-}" ]; then
@@ -30,12 +33,7 @@ DB_PASS=""
 
 if [ "${RESET_PASSWORD:-0}" = "1" ]; then
   echo "==> Resetting database password via API"
-  RESET_JSON="$(curl -sS -m 30 -X POST \
-    -H "Authorization: ${SQUARE_CLOUD_API_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d '{"reset":"password"}' \
-    "https://api.squarecloud.app/v2/databases/${SQUARE_CLOUD_DATABASE_ID}/credentials/reset")"
-  DB_PASS="$(python3 -c "import json,sys; d=json.load(sys.stdin); print(d['response']['password'])" <<< "$RESET_JSON")"
+  DB_PASS="$(sqcloud_reset_db_password "${SQUARE_CLOUD_DATABASE_ID}")"
   echo "New password generated."
 else
   require_env DATABASE_URL
@@ -47,18 +45,7 @@ else
 fi
 
 echo "==> Fetching certificate"
-CERT_JSON="$(mktemp)"
-trap 'rm -f "$CERT_JSON"' EXIT
-HTTP_CODE="$(curl -sS -m 30 -o "$CERT_JSON" -w "%{http_code}" \
-  -H "Authorization: ${SQUARE_CLOUD_API_TOKEN}" \
-  "https://api.squarecloud.app/v2/databases/${SQUARE_CLOUD_DATABASE_ID}/credentials/certificate")"
-if [ "$HTTP_CODE" != "200" ]; then
-  echo "Certificate API HTTP ${HTTP_CODE}" >&2
-  cat "$CERT_JSON" >&2
-  exit 1
-fi
-
-python3 deploy/scripts/build-squarecloud-p12.py "$CERT_JSON" client.p12
+sqcloud_write_client_p12 "${SQUARE_CLOUD_DATABASE_ID}" client.p12
 P12_B64="$(base64 -w 0 client.p12 2>/dev/null || base64 client.p12 | tr -d '\n')"
 
 DATABASE_URL="postgresql://squarecloud:${DB_PASS}@${HOST}:${PORT}/squarecloud?sslmode=require&sslidentity=${P12_PATH}&sslpassword=${P12_PASSWORD}&schema=public"

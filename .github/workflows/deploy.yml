@@ -31,6 +31,12 @@ jobs:
 
       - name: Prepare Square Cloud runtime
         env:
+          # When SQUARE_CLOUD_DATABASE_ID is set, the prepare step mints fresh DB
+          # credentials from the (rotation-proof) API token and ignores the
+          # DATABASE_URL / CLIENT_P12_BASE64 secrets. Leave SQUARE_CLOUD_DATABASE_ID
+          # unset to keep the legacy secret-based path.
+          SQUARE_CLOUD_API_TOKEN: ${{ secrets.SQUARE_CLOUD_API_TOKEN }}
+          SQUARE_CLOUD_DATABASE_ID: ${{ secrets.SQUARE_CLOUD_DATABASE_ID }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CLIENT_P12_BASE64: ${{ secrets.CLIENT_P12_BASE64 }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}

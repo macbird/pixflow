@@ -1,7 +1,12 @@
 import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient({
-  datasources: { db: { url: "postgresql://squarecloud:4GMCfbhKf4bO1iHmmxxViQh8@square-cloud-db-30b40510823f45d9b12fcfc694e95f27.squareweb.app:7247/squarecloud?schema=public" } }
-});
+
+const url = process.env.DATABASE_URL;
+if (!url) {
+  console.error("DATABASE_URL is required (export it before running check_db.js)");
+  process.exit(1);
+}
+
+const prisma = new PrismaClient({ datasources: { db: { url } } });
 
 async function check() {
   try {

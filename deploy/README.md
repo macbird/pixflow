@@ -67,3 +67,37 @@ cd ~/client-manager
 ## Credenciais
 
 Use `deploy/CREDENTIALS.local.md` localmente (gitignored).
+
+## Rotação de senha do Postgres (app não sobe)
+
+Sintoma: a Square Cloud girou a senha do banco → o `DATABASE_URL` embutido no
+deploy fica velho → a app não conecta e a página mostra "took too long to
+respond" / `/health/db` retorna `ok:false`.
+
+### Modo recomendado: autoprovisionamento (à prova de rotação)
+
+Em vez de manter os secrets `DATABASE_URL` e `CLIENT_P12_BASE64` à mão (que
+quebram a cada rotação), deixe o pipeline gerar as credenciais a cada deploy a
+partir do **token de API** (que não gira):
+
+1. Em **Settings → Secrets → Actions**, defina `SQUARE_CLOUD_DATABASE_ID`
+   (o id do banco, ex.: `30b40510823f45d9b12fcfc694e95f27`).
+   `SQUARE_CLOUD_API_TOKEN` já existe.
+2. Faça um push em `main` (ou re-rode o workflow). O step **Prepare** reseta a
+   senha, busca o certificado atual e monta `DATABASE_URL` + `client.p12`
+   sozinho. Os secrets `DATABASE_URL`/`CLIENT_P12_BASE64` passam a ser ignorados.
+
+Enquanto `SQUARE_CLOUD_DATABASE_ID` **não** estiver definido, o pipeline usa o
+caminho antigo (secrets `DATABASE_URL`/`CLIENT_P12_BASE64`) — sem mudança de
+comportamento.
+
+### Recuperação manual (sem habilitar o autoprovisionamento)
+
+```bash
+export SQUARE_CLOUD_API_TOKEN=...
+export SQUARE_CLOUD_DATABASE_ID=30b40510823f45d9b12fcfc694e95f27
+RESET_PASSWORD=1 bash deploy/scripts/rotate-squarecloud-db-credentials.sh
+```
+
+O script imprime os novos `DATABASE_URL` e `CLIENT_P12_BASE64`. Atualize os dois
+secrets no GitHub e re-rode o deploy (push em `main`).

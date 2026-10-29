@@ -4,6 +4,7 @@
 import argparse
 import base64
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -44,6 +45,8 @@ def main() -> int:
     out_path = Path(args.output_p12)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    p12_password = os.environ.get("SQUARE_CLOUD_P12_PASSWORD", "squarecloud")
+
     with tempfile.TemporaryDirectory() as tmp:
         key_path = Path(tmp) / "client.key"
         crt_path = Path(tmp) / "client.crt"
@@ -61,7 +64,7 @@ def main() -> int:
                 "-in",
                 str(crt_path),
                 "-password",
-                "pass:squarecloud",
+                f"pass:{p12_password}",
                 "-certpbe",
                 "AES-256-CBC",
                 "-keypbe",
